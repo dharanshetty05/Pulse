@@ -1,4 +1,5 @@
 export interface Lead {
+    rowNumber: number;
     leadId: string;
     businessName: string;
     city: string;

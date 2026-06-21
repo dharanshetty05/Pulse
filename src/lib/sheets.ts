@@ -24,7 +24,8 @@ export async function getLeads(): Promise<Lead[]> {
 
   const dataRows = rows.slice(1);
 
-  return dataRows.map((row) => ({
+  return dataRows.map((row, index) => ({
+    rowNumber: index + 2,
     leadId: row[0] || "",
     businessName: row[1] || "",
     city: row[2] || "",
