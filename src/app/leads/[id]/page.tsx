@@ -1,4 +1,7 @@
+export const dynamic = "force-dynamic";
+
 import { getLeads } from "@/lib/sheets";
+import LeadEditor from "@/components/dashboard/LeadEditor";
 
 export default async function LeadPage({
   params,
@@ -69,10 +72,17 @@ export default async function LeadPage({
           {lead.notes}
         </p>
 
-                <p>
-  <strong>Row:</strong>{" "}
-  {lead.rowNumber}
-</p>
+        <p>
+          <strong>Row:</strong>{" "}
+          {lead.rowNumber}
+        </p>
+
+        <LeadEditor
+          rowNumber={lead.rowNumber}
+          currentStatus={lead.responseStatus}
+          currentMeeting={lead.meetingBooked}
+          currentNotes={lead.notes}
+        />
       </div>
     </div>
   );

@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { getLeads } from "@/lib/sheets";
 import { getStats } from "@/lib/analytics";
 

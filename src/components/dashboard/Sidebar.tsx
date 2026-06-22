@@ -28,6 +28,13 @@ export default function Sidebar() {
         >
           Follow Ups
         </Link>
+
+        <Link 
+          href="/leads/new"
+          className="block rounded-lg px-4 py-3 hover:bg-gray-100"
+        >
+          Add Lead
+        </Link>
       </nav>
     </aside>
   );

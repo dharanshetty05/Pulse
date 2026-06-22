@@ -1,8 +1,17 @@
+export const dynamic = "force-dynamic";
+
 import { getLeads } from "@/lib/sheets";
-import LeadsTable from "@/components/dashboard/LeadsTable";
+
+import LeadsSearch from "@/components/dashboard/LeadsSearch";
 
 export default async function LeadsPage() {
   const leads = await getLeads();
+
+  console.log(
+    "LEADS PAGE RENDERED:",
+    leads.length
+  );
+
 
   return (
     <div>
@@ -10,7 +19,7 @@ export default async function LeadsPage() {
         Leads
       </h1>
 
-      <LeadsTable leads={leads} />
+      <LeadsSearch leads={leads} />
     </div>
   );
 }

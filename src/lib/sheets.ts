@@ -22,7 +22,13 @@ export async function getLeads(): Promise<Lead[]> {
 
   const rows = response.data.values || [];
 
+  console.log(
+  "Google returned rows:",
+  rows.length
+);
+
   const dataRows = rows.slice(1);
+
 
   return dataRows.map((row, index) => ({
     rowNumber: index + 2,
@@ -41,4 +47,98 @@ export async function getLeads(): Promise<Lead[]> {
     meetingDateTime: row[12] || "",
     notes: row[13] || "",
   }));
+}
+
+export async function updateLead(
+  rowNumber: number,
+  responseStatus: string,
+  meetingBooked: string,
+  notes: string
+) {
+  const sheets = google.sheets({
+    version: "v4",
+    auth,
+  });
+
+  await sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId: process.env.GOOGLE_SHEET_ID,
+    requestBody: {
+      valueInputOption: "RAW",
+      data: [
+        {
+          range: `Whatsapp!H${rowNumber}`,
+          values: [[responseStatus]],
+        },
+        {
+          range: `Whatsapp!L${rowNumber}`,
+          values: [[meetingBooked]],
+        },
+        {
+          range: `Whatsapp!N${rowNumber}`,
+          values: [[notes]],
+        },
+      ],
+    },
+  });
+}
+
+export async function createLead(
+  lead: {
+    businessName: string;
+    city: string;
+    instagramId: string;
+    website: string;
+  }
+) {
+
+  const leads = await getLeads();
+
+const lastLead = leads[leads.length - 1];
+
+const nextLeadId = (
+  Number(lastLead.leadId) + 1
+).toString();
+
+  const sheets = google.sheets({
+    version: "v4",
+    auth,
+  });
+
+  const today = new Date();
+
+  const formattedDate =
+    `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
+
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: process.env.GOOGLE_SHEET_ID,
+    range: "Whatsapp!A:N",
+    valueInputOption: "RAW",
+    requestBody: {
+      values: [[
+        nextLeadId,
+        lead.businessName,
+        lead.city,
+        lead.instagramId,
+        lead.website,
+
+        formattedDate, // Date Contacted
+
+        "Yes",         // Cold DM Sent
+
+        "Msg Sent",    // Response Status
+
+        "",            // Follow Up 1
+
+        "",            // Follow Up 2
+
+        "",            // Objection
+
+        "",          // Meeting Booked
+
+        "",            // Meeting Date
+
+        ""             // Notes
+      ]]
+    }
+  });
 }
