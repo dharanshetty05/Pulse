@@ -1,7 +1,9 @@
 export const dynamic = "force-dynamic";
 
 import { getLeads } from "@/lib/sheets";
-import LeadEditor from "@/components/dashboard/LeadEditor";
+import LeadDetails from "@/components/dashboard/LeadDetails";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
 export default async function LeadPage({
   params,
@@ -9,81 +11,37 @@ export default async function LeadPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-
   const leads = await getLeads();
-
-  const lead = leads.find(
-    (lead) => lead.leadId === id
-  );
+  const lead = leads.find((lead) => lead.leadId === id);
 
   if (!lead) {
-    return <div>Lead not found</div>;
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
+        <p className="text-sm font-medium text-gray-900">Lead not found</p>
+        <p className="text-xs text-gray-400">This lead may have been removed or the link is incorrect.</p>
+        <Link
+          href="/leads"
+          className="mt-2 flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 transition-colors"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to Leads
+        </Link>
+      </div>
+    );
   }
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold mb-6">
-        {lead.businessName}
-      </h1>
+    <div className="space-y-6">
+      {/* Back nav */}
+      <Link
+        href="/leads"
+        className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-700 transition-colors"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" />
+        Leads
+      </Link>
 
-      <div className="space-y-4">
-        <p>
-          <strong>City:</strong>{" "}
-          {lead.city}
-        </p>
-
-        <p>
-          <strong>Instagram:</strong>{" "}
-          {lead.instagramId}
-        </p>
-
-        <p>
-          <strong>Website:</strong>{" "}
-          {lead.website}
-        </p>
-
-        <p>
-          <strong>Status:</strong>{" "}
-          {lead.responseStatus}
-        </p>
-
-        <p>
-          <strong>Date Contacted:</strong>{" "}
-          {lead.dateContacted}
-        </p>
-
-        <p>
-          <strong>Follow Up 1:</strong>{" "}
-          {lead.followUp1}
-        </p>
-
-        <p>
-          <strong>Follow Up 2:</strong>{" "}
-          {lead.followUp2}
-        </p>
-
-        <p>
-          <strong>Meeting:</strong>{" "}
-          {lead.meetingBooked}
-        </p>
-
-        <p>
-          <strong>Notes:</strong>{" "}
-          {lead.notes}
-        </p>
-
-        <p>
-          <strong>Row:</strong>{" "}
-          {lead.rowNumber}
-        </p>
-
-        <LeadEditor
-          rowNumber={lead.rowNumber}
-          currentStatus={lead.responseStatus}
-          currentMeeting={lead.meetingBooked}
-          currentNotes={lead.notes}
-        />
-      </div>
+      <LeadDetails lead={lead} />
     </div>
   );
 }

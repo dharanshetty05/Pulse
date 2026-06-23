@@ -1,10 +1,20 @@
 import { Lead } from "@/types/lead";
+import { parseLeadDate, isToday } from "./date";
 
 export function getStats(leads: Lead[]) {
   const totalLeads = leads.length;
 
   const dmsSent = leads.filter(
     (lead) => lead.coldDmSent === "Yes"
+  ).length;
+
+  const messagedToday = leads.filter(
+    (lead) =>
+      isToday(
+        parseLeadDate(
+          lead.dateContacted
+        )
+      )
   ).length;
 
   const replies = leads.filter(
@@ -30,7 +40,7 @@ export function getStats(leads: Lead[]) {
 
   return {
     totalLeads,
-    dmsSent,
+    messagedToday,
     replies,
     interested,
     meetings,

@@ -22,11 +22,6 @@ export async function getLeads(): Promise<Lead[]> {
 
   const rows = response.data.values || [];
 
-  console.log(
-  "Google returned rows:",
-  rows.length
-);
-
   const dataRows = rows.slice(1);
 
 
