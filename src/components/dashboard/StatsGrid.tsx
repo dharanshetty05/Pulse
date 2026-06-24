@@ -11,6 +11,20 @@ import {
   TrendingUp,
 } from "lucide-react";
 
+import { Variants } from "framer-motion";
+
+const item: Variants = {
+  hidden: { opacity: 0, y: 10 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.2,
+      ease: [0.16, 1, 0.3, 1],
+    },
+  },
+};
+
 interface Stats {
   totalLeads: number;
   messagedToday: number;
@@ -29,10 +43,10 @@ const container = {
   },
 };
 
-const item = {
-  hidden: { opacity: 0, y: 10 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.2, ease: "easeOut" } },
-};
+// const item = {
+//   hidden: { opacity: 0, y: 10 },
+//   show: { opacity: 1, y: 0, transition: { duration: 0.2, ease: "easeOut" } },
+// };
 
 export default function StatsGrid({ stats }: { stats: Stats }) {
   const cards = [

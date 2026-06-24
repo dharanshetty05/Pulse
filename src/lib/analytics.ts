@@ -33,10 +33,10 @@ export function getStats(leads: Lead[]) {
       lead.meetingBooked === "Yes"
   ).length;
 
-  const replyRate =
-    dmsSent > 0
-      ? ((replies / dmsSent) * 100).toFixed(1)
-      : "0";
+const replyRate =
+  dmsSent > 0
+    ? Number(((replies / dmsSent) * 100).toFixed(1))
+    : 0;
 
   return {
     totalLeads,
