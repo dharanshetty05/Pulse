@@ -44,7 +44,7 @@ export default function Sidebar() {
             <Zap className="w-3.5 h-3.5 text-white fill-white" />
           </div>
           <span className="text-sm font-semibold text-gray-900 tracking-tight">
-            Outreach OS
+            Pulse
           </span>
         </Link>
       </div>
