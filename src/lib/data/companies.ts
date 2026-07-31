@@ -4,6 +4,7 @@ import { Prisma, Status } from "@prisma/client";
 export async function getCompanies() {
   return db.company.findMany({
     orderBy: { createdAt: "desc" },
+    include: { groups: true }
   });
 }
 

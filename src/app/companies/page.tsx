@@ -1,12 +1,15 @@
 export const dynamic = "force-dynamic";
 
+import { Suspense } from "react";
 import { getCompanies } from "@/lib/data/companies";
+import { getGroups } from "@/lib/data/groups";
 import CompaniesSearch from "@/components/dashboard/CompaniesSearch";
 import NewCompanyButton from "@/components/dashboard/NewCompanyButton";
 import { isToday } from "@/lib/date";
 
 export default async function CompaniesPage() {
   const companies = await getCompanies();
+  const groups = await getGroups();
 
   const totalCompanies = companies.length;
   const contactedToday = companies.filter((c) => isToday(c.createdAt)).length;
@@ -43,7 +46,9 @@ export default async function CompaniesPage() {
       {/* Divider */}
       <div className="h-px bg-gray-100" />
 
-      <CompaniesSearch companies={companies} />
+      <Suspense fallback={<div className="h-32 flex items-center justify-center text-gray-400 text-sm">Loading...</div>}>
+        <CompaniesSearch companies={companies} groups={groups} />
+      </Suspense>
     </div>
   );
 }

@@ -1,16 +1,21 @@
 "use client";
 
-import { Company, Status } from "@prisma/client";
+import { Company, Status, Group } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Building2, MapPin, Inbox, Edit3, Trash2, Globe, Heart } from "lucide-react";
+import { Building2, MapPin, Inbox, Edit3, Trash2, Globe, Heart, Mail, Phone } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/components/ui/toast";
 import { deleteCompanyAction } from "@/app/actions/deleteCompany";
 import { updateCompanyAction } from "@/app/actions/updateCompany";
 
+interface CompanyWithGroups extends Company {
+  groups: Group[];
+}
+
 interface Props {
-  companies: Company[];
+  companies: CompanyWithGroups[];
+  groups: Group[];
   isSearchActive?: boolean;
 }
 
@@ -28,13 +33,76 @@ const rowVariants = {
   exit: { opacity: 0, x: -10, transition: { duration: 0.2 } },
 };
 
-export default function CompaniesTable({ companies, isSearchActive }: Props) {
+function EditableCell({ 
+  value, 
+  onSave, 
+  placeholder = "—", 
+  type = "text",
+  icon: Icon
+}: { 
+  value: string | null, 
+  onSave: (val: string) => void, 
+  placeholder?: string, 
+  type?: string,
+  icon?: any
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentValue, setCurrentValue] = useState(value || "");
+
+  if (isEditing) {
+    return (
+      <div className="flex items-center gap-1.5 w-full">
+        {Icon && <Icon className="h-3 w-3 shrink-0 text-gray-400" strokeWidth={1.5} />}
+        <input
+          autoFocus
+          type={type}
+          value={currentValue}
+          onChange={e => setCurrentValue(e.target.value)}
+          onBlur={() => {
+            setIsEditing(false);
+            if (currentValue !== (value || "")) {
+              onSave(currentValue);
+            }
+          }}
+          onKeyDown={e => {
+            if (e.key === "Enter") {
+              setIsEditing(false);
+              if (currentValue !== (value || "")) {
+                onSave(currentValue);
+              }
+            }
+            if (e.key === "Escape") {
+              setIsEditing(false);
+              setCurrentValue(value || "");
+            }
+          }}
+          className="w-full bg-white border border-gray-300 rounded px-1 py-0.5 text-xs text-gray-900 outline-none focus:ring-1 focus:ring-gray-900 min-w-[80px]"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
+      className="flex items-center gap-1.5 cursor-text hover:bg-gray-100 px-1 py-0.5 rounded -ml-1 transition-colors w-full group/cell"
+      title="Click to edit"
+    >
+      {Icon && <Icon className={`h-3 w-3 shrink-0 ${value ? 'text-gray-400' : 'text-gray-300'}`} strokeWidth={1.5} />}
+      <span className={`text-xs truncate ${value ? 'text-gray-600' : 'text-gray-300'}`}>
+        {value || placeholder}
+      </span>
+      <Edit3 className="h-2.5 w-2.5 text-gray-400 opacity-0 group-hover/cell:opacity-100 ml-auto" />
+    </div>
+  );
+}
+
+export default function CompaniesTable({ companies, groups, isSearchActive }: Props) {
   const router = useRouter();
   const { toast } = useToast();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [optimisticDeletes, setOptimisticDeletes] = useState<Set<string>>(new Set());
 
-  // Filter out optimistically deleted items
   const visibleCompanies = companies.filter((c) => !optimisticDeletes.has(c.id));
 
   const toggleAll = () => {
@@ -52,23 +120,22 @@ export default function CompaniesTable({ companies, isSearchActive }: Props) {
     setSelectedIds(next);
   };
 
+  const handleUpdateField = async (id: string, field: string, value: string) => {
+    await updateCompanyAction(id, { [field]: value });
+    toast({ type: "success", message: "Updated" });
+  };
+
   const handleDelete = (id: string, businessName: string) => {
-    // 1. Optimistic hide
     setOptimisticDeletes((prev) => new Set(prev).add(id));
     if (selectedIds.has(id)) toggleOne(id);
     
-    // 2. Set timeout for actual deletion
     let isUndone = false;
-    
     const timeoutId = setTimeout(() => {
       if (!isUndone) {
-        deleteCompanyAction(id).then(() => {
-          router.refresh();
-        });
+        deleteCompanyAction(id).then(() => router.refresh());
       }
     }, 5000);
 
-    // 3. Show undo toast
     toast({
       type: "undo",
       message: `${businessName} deleted`,
@@ -100,9 +167,7 @@ export default function CompaniesTable({ companies, isSearchActive }: Props) {
     let isUndone = false;
     const timeoutId = setTimeout(() => {
       if (!isUndone) {
-        Promise.all(idsToDelete.map(id => deleteCompanyAction(id))).then(() => {
-          router.refresh();
-        });
+        Promise.all(idsToDelete.map(id => deleteCompanyAction(id))).then(() => router.refresh());
       }
     }, 5000);
 
@@ -128,7 +193,18 @@ export default function CompaniesTable({ companies, isSearchActive }: Props) {
     const idsToUpdate = Array.from(selectedIds);
     if (idsToUpdate.length === 0) return;
     
-    await Promise.all(idsToUpdate.map(id => updateCompanyAction(id, status))); 
+    await Promise.all(idsToUpdate.map(id => updateCompanyAction(id, { status }))); 
+    toast({ type: "success", message: `Updated ${idsToUpdate.length} companies` });
+    setSelectedIds(new Set());
+    router.refresh();
+  };
+
+  const handleBulkGroup = async (groupId: string, action: "connect" | "disconnect") => {
+    const idsToUpdate = Array.from(selectedIds);
+    if (idsToUpdate.length === 0) return;
+
+    const payload = action === "connect" ? { connectGroup: groupId } : { disconnectGroup: groupId };
+    await Promise.all(idsToUpdate.map(id => updateCompanyAction(id, payload)));
     toast({ type: "success", message: `Updated ${idsToUpdate.length} companies` });
     setSelectedIds(new Set());
     router.refresh();
@@ -145,12 +221,13 @@ export default function CompaniesTable({ companies, isSearchActive }: Props) {
             exit={{ opacity: 0, height: 0 }}
             className="flex items-center justify-between rounded-lg bg-gray-900 px-4 py-3 text-sm text-white shadow-sm overflow-hidden"
           >
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
               <span className="font-medium bg-white/20 px-2 py-0.5 rounded-md">
                 {selectedIds.size} selected
               </span>
+              
               <div className="flex items-center gap-2 border-l border-gray-700 pl-4">
-                <span className="text-gray-400 text-xs uppercase tracking-wider font-semibold">Change Status:</span>
+                <span className="text-gray-400 text-xs uppercase tracking-wider font-semibold">Status:</span>
                 <select 
                   className="bg-transparent text-white text-sm outline-none cursor-pointer"
                   onChange={(e) => handleBulkStatus(e.target.value as Status)}
@@ -166,13 +243,42 @@ export default function CompaniesTable({ companies, isSearchActive }: Props) {
                   <option value="CLOSED" className="text-gray-900">Closed</option>
                 </select>
               </div>
+
+              <div className="flex items-center gap-2 border-l border-gray-700 pl-4">
+                <span className="text-gray-400 text-xs uppercase tracking-wider font-semibold">Add to Group:</span>
+                <select 
+                  className="bg-transparent text-white text-sm outline-none cursor-pointer w-24 truncate"
+                  onChange={(e) => handleBulkGroup(e.target.value, "connect")}
+                  value=""
+                >
+                  <option value="" disabled className="text-gray-900">Select...</option>
+                  {groups.map(g => (
+                    <option key={g.id} value={g.id} className="text-gray-900">{g.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2 border-l border-gray-700 pl-4">
+                <span className="text-gray-400 text-xs uppercase tracking-wider font-semibold">Remove from Group:</span>
+                <select 
+                  className="bg-transparent text-white text-sm outline-none cursor-pointer w-24 truncate"
+                  onChange={(e) => handleBulkGroup(e.target.value, "disconnect")}
+                  value=""
+                >
+                  <option value="" disabled className="text-gray-900">Select...</option>
+                  {groups.map(g => (
+                    <option key={g.id} value={g.id} className="text-gray-900">{g.name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
+            
             <button
               onClick={handleBulkDelete}
-              className="flex items-center gap-1.5 text-red-400 hover:text-red-300 transition-colors"
+              className="flex items-center gap-1.5 text-red-400 hover:text-red-300 transition-colors shrink-0 ml-4"
             >
               <Trash2 className="h-4 w-4" />
-              Delete Selected
+              Delete
             </button>
           </motion.div>
         )}
@@ -181,7 +287,7 @@ export default function CompaniesTable({ companies, isSearchActive }: Props) {
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-200">
+            <tr className="border-b border-gray-200 bg-gray-50/50">
               <th className="px-4 py-3 text-left w-12">
                 <input
                   type="checkbox"
@@ -190,22 +296,22 @@ export default function CompaniesTable({ companies, isSearchActive }: Props) {
                   className="rounded border-gray-300 text-gray-900 focus:ring-gray-900 cursor-pointer"
                 />
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-400">
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                 Business
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-400">
-                Links
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 w-48">
+                Contact
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-400">
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 w-48">
+                Social
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 w-32">
                 City
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-400">
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 w-36">
                 Status
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-400">
-                Updated
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-400 w-24">
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 w-24">
                 Actions
               </th>
             </tr>
@@ -219,11 +325,6 @@ export default function CompaniesTable({ companies, isSearchActive }: Props) {
                       <Inbox className="h-8 w-8 text-gray-300" strokeWidth={1.5} />
                       <p className="text-sm font-medium text-gray-500">
                         {isSearchActive ? "No matches found" : "No companies yet"}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        {isSearchActive 
-                          ? "Try adjusting your search or filters." 
-                          : "Add your first company or import a CSV."}
                       </p>
                     </div>
                   </td>
@@ -252,47 +353,37 @@ export default function CompaniesTable({ companies, isSearchActive }: Props) {
                         className="rounded border-gray-300 text-gray-900 focus:ring-gray-900 cursor-pointer"
                       />
                     </td>
-                    <td className="px-4 py-3 cursor-pointer" onClick={() => router.push(`/companies/${company.id}`)}>
+                    <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <Building2 className="h-3.5 w-3.5 shrink-0 text-gray-300 group-hover:text-gray-400 transition-colors" strokeWidth={1.5} />
-                        <span className="font-medium text-gray-900 leading-tight">
+                        <Building2 className="h-3.5 w-3.5 shrink-0 text-gray-400 group-hover:text-gray-500 transition-colors" strokeWidth={1.5} />
+                        <span className="font-medium text-gray-900 leading-tight cursor-pointer hover:underline" onClick={() => router.push(`/companies/${company.id}`)}>
                           {company.businessName}
                         </span>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        {company.website ? (
-                          <a href={company.website.startsWith('http') ? company.website : `https://${company.website}`} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-blue-500 transition-colors" title="Website">
-                            <Globe className="h-3.5 w-3.5" />
-                          </a>
-                        ) : (
-                          <span className="text-gray-200"><Globe className="h-3.5 w-3.5" /></span>
-                        )}
-                        {company.instagram ? (
-                          <a href={`https://instagram.com/${company.instagram}`} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-pink-500 transition-colors" title="Instagram">
-                            <Heart className="h-3.5 w-3.5" />
-                          </a>
-                        ) : (
-                          <span className="text-gray-200"><Heart className="h-3.5 w-3.5" /></span>
-                        )}
+                    <td className="px-4 py-2">
+                      <div className="flex flex-col gap-1">
+                        <EditableCell value={company.email} onSave={(val) => handleUpdateField(company.id, 'email', val)} placeholder="Email" type="email" icon={Mail} />
+                        <EditableCell value={company.phone} onSave={(val) => handleUpdateField(company.id, 'phone', val)} placeholder="Phone" type="tel" icon={Phone} />
                       </div>
                     </td>
-                    <td className="px-4 py-3 cursor-pointer" onClick={() => router.push(`/companies/${company.id}`)}>
-                      <div className="flex items-center gap-1.5 text-gray-500">
-                        <MapPin className="h-3 w-3 shrink-0 text-gray-300" strokeWidth={1.5} />
-                        <span className="text-xs">{company.city || <span className="text-gray-300">—</span>}</span>
+                    <td className="px-4 py-2">
+                      <div className="flex flex-col gap-1">
+                        <EditableCell value={company.website} onSave={(val) => handleUpdateField(company.id, 'website', val)} placeholder="Website" type="url" icon={Globe} />
+                        <EditableCell value={company.instagram} onSave={(val) => handleUpdateField(company.id, 'instagram', val)} placeholder="Instagram" type="text" icon={Heart} />
                       </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <EditableCell value={company.city} onSave={(val) => handleUpdateField(company.id, 'city', val)} placeholder="City" icon={MapPin} />
                     </td>
                     <td className="px-4 py-3">
                       <select
                         value={company.status}
-                        onChange={(e) => {
-                          updateCompanyAction(company.id, e.target.value as Status);
+                        onChange={async (e) => {
+                          await updateCompanyAction(company.id, { status: e.target.value as Status });
                           toast({ type: "success", message: "Status updated" });
-                          router.refresh();
                         }}
-                        className="text-xs appearance-none bg-transparent cursor-pointer outline-none hover:bg-gray-100 px-1 py-0.5 rounded transition-colors"
+                        className="text-xs font-medium appearance-none bg-transparent cursor-pointer outline-none hover:bg-gray-100 px-1.5 py-1 rounded transition-colors w-full"
                       >
                         <option value="NEW">New</option>
                         <option value="CONTACTED">Contacted</option>
@@ -303,15 +394,12 @@ export default function CompaniesTable({ companies, isSearchActive }: Props) {
                         <option value="CLOSED">Closed</option>
                       </select>
                     </td>
-                    <td className="px-4 py-3 text-gray-400 text-xs tabular-nums cursor-pointer" onClick={() => router.push(`/companies/${company.id}`)}>
-                      {company.updatedAt.toLocaleDateString()}
-                    </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => router.push(`/companies/${company.id}`)}
                           className="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
-                          title="Edit"
+                          title="Open details"
                         >
                           <Edit3 className="h-3.5 w-3.5" />
                         </button>

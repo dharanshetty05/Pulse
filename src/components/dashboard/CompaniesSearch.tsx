@@ -1,14 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Company } from "@prisma/client";
+import { useMemo, useState, useEffect, useCallback } from "react";
+import { Company, Group } from "@prisma/client";
 import CompaniesTable from "./CompaniesTable";
 import { isToday, isThisWeek, isThisMonth } from "@/lib/date";
 import { Search, MapPin, X, Filter, ArrowUpDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+
+interface CompanyWithGroups extends Company {
+  groups: Group[];
+}
 
 interface Props {
-  companies: Company[];
+  companies: CompanyWithGroups[];
+  groups: Group[];
 }
 
 const DATE_FILTERS = [
@@ -37,36 +43,69 @@ const SORT_OPTIONS = [
   { label: "Recently Updated", value: "updated" },
 ];
 
-export default function CompaniesSearch({ companies }: Props) {
-  const [query, setQuery] = useState("");
-  const [city, setCity] = useState("All");
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [dateFilter, setDateFilter] = useState("week");
-  const [sortOption, setSortOption] = useState("newest");
+export default function CompaniesSearch({ companies, groups }: Props) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Read from URL
+  const urlQuery = searchParams.get("query") || "";
+  const urlCity = searchParams.get("city") || "All";
+  const urlStatus = searchParams.get("status") || "All";
+  const urlDate = searchParams.get("date") || "all"; // changed default to all for url-based, or week? Let's use all.
+  const urlSort = searchParams.get("sort") || "newest";
+  const urlGroup = searchParams.get("group") || "All";
+
+  // Local state for immediate typing feedback on search
+  const [localQuery, setLocalQuery] = useState(urlQuery);
+
+  // Sync query to URL with debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      updateUrl("query", localQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [localQuery]);
+
+  const updateUrl = useCallback((key: string, value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value && value !== "All" && value !== "all") {
+      params.set(key, value);
+    } else {
+      params.delete(key);
+    }
+    // Only push if changed
+    if (params.toString() !== searchParams.toString()) {
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    }
+  }, [searchParams, pathname, router]);
 
   const filteredAndSortedCompanies = useMemo(() => {
     let result = companies.filter((company) => {
-      const lowerQuery = query.toLowerCase();
+      const lowerQuery = urlQuery.toLowerCase();
       const matchesSearch = 
         company.businessName.toLowerCase().includes(lowerQuery) ||
         (company.website && company.website.toLowerCase().includes(lowerQuery)) ||
         (company.instagram && company.instagram.toLowerCase().includes(lowerQuery)) ||
+        (company.email && company.email.toLowerCase().includes(lowerQuery)) ||
+        (company.phone && company.phone.toLowerCase().includes(lowerQuery)) ||
         (company.city && company.city.toLowerCase().includes(lowerQuery));
 
-      const matchesCity = city === "All" || company.city === city;
-      const matchesStatus = statusFilter === "All" || company.status === statusFilter;
+      const matchesCity = urlCity === "All" || company.city === urlCity;
+      const matchesStatus = urlStatus === "All" || company.status === urlStatus;
+      const matchesGroup = urlGroup === "All" || company.groups.some(g => g.name === urlGroup);
       
       const compDate = company.createdAt;
       let matchesDate = true;
-      if (dateFilter === "today") matchesDate = isToday(compDate);
-      if (dateFilter === "week") matchesDate = isThisWeek(compDate);
-      if (dateFilter === "month") matchesDate = isThisMonth(compDate);
+      if (urlDate === "today") matchesDate = isToday(compDate);
+      if (urlDate === "week") matchesDate = isThisWeek(compDate);
+      if (urlDate === "month") matchesDate = isThisMonth(compDate);
       
-      return matchesSearch && matchesCity && matchesStatus && matchesDate;
+      return matchesSearch && matchesCity && matchesStatus && matchesDate && matchesGroup;
     });
 
     result.sort((a, b) => {
-      switch (sortOption) {
+      switch (urlSort) {
         case "newest":
           return b.createdAt.getTime() - a.createdAt.getTime();
         case "oldest":
@@ -83,30 +122,57 @@ export default function CompaniesSearch({ companies }: Props) {
     });
 
     return result;
-  }, [companies, query, city, statusFilter, dateFilter, sortOption]);
+  }, [companies, urlQuery, urlCity, urlStatus, urlDate, urlSort, urlGroup]);
 
   const cities = ["All", ...new Set(companies.map((c) => c.city).filter(Boolean) as string[])];
+  const hasActiveFilters = urlQuery !== "" || urlCity !== "All" || urlStatus !== "All" || urlGroup !== "All" || urlDate !== "all";
 
-  const hasActiveFilters = query !== "" || city !== "All" || statusFilter !== "All";
+  const clearFilters = () => {
+    setLocalQuery("");
+    router.push(pathname, { scroll: false });
+  };
 
   return (
     <div className="space-y-4">
+      {/* Quick Group Navigation Chips */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          onClick={() => updateUrl("group", "All")}
+          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+            urlGroup === "All" ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          }`}
+        >
+          All Companies
+        </button>
+        {groups.map((group) => (
+          <button
+            key={group.id}
+            onClick={() => updateUrl("group", group.name)}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              urlGroup === group.name ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            {group.name}
+          </button>
+        ))}
+      </div>
+
       {/* Date filter tabs */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-1 w-fit">
           {DATE_FILTERS.map(({ label, value }) => (
             <button
               key={value}
-              onClick={() => setDateFilter(value)}
+              onClick={() => updateUrl("date", value)}
               className={`
                 relative px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-150
-                ${dateFilter === value
+                ${urlDate === value
                   ? "text-gray-900"
                   : "text-gray-500 hover:text-gray-700"
                 }
               `}
             >
-              {dateFilter === value && (
+              {urlDate === value && (
                 <motion.span
                   layoutId="filter-pill"
                   className="absolute inset-0 rounded-md bg-white shadow-sm"
@@ -126,9 +192,9 @@ export default function CompaniesSearch({ companies }: Props) {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" strokeWidth={1.5} />
           <input
             type="text"
-            placeholder="Search name, website, city..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search name, website, email, phone, city..."
+            value={localQuery}
+            onChange={(e) => setLocalQuery(e.target.value)}
             className="
               w-full rounded-lg border border-gray-200 bg-white
               py-2.5 pl-9 pr-9 text-sm text-gray-900 placeholder-gray-400
@@ -138,13 +204,13 @@ export default function CompaniesSearch({ companies }: Props) {
             "
           />
           <AnimatePresence>
-            {query && (
+            {localQuery && (
               <motion.button
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
                 transition={{ duration: 0.12 }}
-                onClick={() => setQuery("")}
+                onClick={() => setLocalQuery("")}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
               >
                 <X className="h-3.5 w-3.5" />
@@ -157,8 +223,8 @@ export default function CompaniesSearch({ companies }: Props) {
         <div className="relative">
           <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" strokeWidth={1.5} />
           <select
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
+            value={urlCity}
+            onChange={(e) => updateUrl("city", e.target.value)}
             className="
               appearance-none rounded-lg border border-gray-200 bg-white
               py-2.5 pl-9 pr-8 text-sm text-gray-700
@@ -182,8 +248,8 @@ export default function CompaniesSearch({ companies }: Props) {
         <div className="relative">
           <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" strokeWidth={1.5} />
           <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            value={urlStatus}
+            onChange={(e) => updateUrl("status", e.target.value)}
             className="
               appearance-none rounded-lg border border-gray-200 bg-white
               py-2.5 pl-9 pr-8 text-sm text-gray-700
@@ -207,8 +273,8 @@ export default function CompaniesSearch({ companies }: Props) {
         <div className="relative">
           <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" strokeWidth={1.5} />
           <select
-            value={sortOption}
-            onChange={(e) => setSortOption(e.target.value)}
+            value={urlSort}
+            onChange={(e) => updateUrl("sort", e.target.value)}
             className="
               appearance-none rounded-lg border border-gray-200 bg-white
               py-2.5 pl-9 pr-8 text-sm text-gray-700
@@ -243,7 +309,7 @@ export default function CompaniesSearch({ companies }: Props) {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 6 }}
               transition={{ duration: 0.15 }}
-              onClick={() => { setQuery(""); setCity("All"); setStatusFilter("All"); }}
+              onClick={clearFilters}
               className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors"
             >
               <X className="h-3 w-3" />
@@ -255,6 +321,7 @@ export default function CompaniesSearch({ companies }: Props) {
 
       <CompaniesTable 
         companies={filteredAndSortedCompanies} 
+        groups={groups}
         isSearchActive={hasActiveFilters}
       />
     </div>
