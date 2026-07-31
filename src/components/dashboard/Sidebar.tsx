@@ -5,9 +5,9 @@ import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard,
-  Users,
+  Building2,
   Clock,
-  Plus,
+  Download,
   Zap,
 } from "lucide-react";
 
@@ -18,14 +18,19 @@ const navItems = [
     icon: LayoutDashboard,
   },
   {
-    label: "Leads",
-    href: "/leads",
-    icon: Users,
+    label: "Companies",
+    href: "/companies",
+    icon: Building2,
   },
   {
     label: "Follow Ups",
     href: "/followups",
     icon: Clock,
+  },
+  {
+    label: "Import Queue",
+    href: "/dashboard/import-queue",
+    icon: Download,
   },
 ];
 
@@ -91,17 +96,6 @@ export default function Sidebar() {
           );
         })}
       </nav>
-
-      {/* Add Lead CTA */}
-      <div className="px-3 pb-5">
-        <Link
-          href="/leads/new"
-          className="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-md bg-gray-900 hover:bg-gray-700 active:bg-gray-800 text-white text-sm font-medium transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2"
-        >
-          <Plus className="w-4 h-4" />
-          Add Lead
-        </Link>
-      </div>
     </aside>
   );
 }

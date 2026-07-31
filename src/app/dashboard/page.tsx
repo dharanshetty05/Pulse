@@ -20,8 +20,8 @@ function getFormattedDate() {
 }
 
 export default async function DashboardPage() {
-  const leads = await getCompanies();
-  const stats = getStats(leads);
+  const companies = await getCompanies();
+  const stats = getStats(companies);
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">

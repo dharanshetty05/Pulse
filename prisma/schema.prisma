@@ -17,6 +17,13 @@ enum Status {
   CLOSED
 }
 
+enum ImportStatus {
+  PENDING
+  APPROVED
+  SKIPPED
+  FAILED
+}
+
 model Company {
   id           String   @id @default(uuid())
   businessName String
@@ -29,4 +36,23 @@ model Company {
   notes        String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  
+  importedFrom ImportCompany[]
+}
+
+model ImportCompany {
+  id           String       @id @default(uuid())
+  businessName String
+  website      String?
+  instagram    String?
+  email        String?
+  phone        String?
+  city         String?
+  status       Status       @default(NEW)
+  notes        String?
+  importStatus ImportStatus @default(PENDING)
+  companyId    String?
+  company      Company?     @relation(fields: [companyId], references: [id])
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 }

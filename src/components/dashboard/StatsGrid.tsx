@@ -26,7 +26,7 @@ const item: Variants = {
 };
 
 interface Stats {
-  totalLeads: number;
+  totalCompanies: number;
   messagedToday: number;
   replies: number;
   interested: number;
@@ -51,8 +51,8 @@ const container = {
 export default function StatsGrid({ stats }: { stats: Stats }) {
   const cards = [
     {
-      title: "Total Leads",
-      value: stats.totalLeads,
+      title: "Total Companies",
+      value: stats.totalCompanies,
       icon: Users,
       accent: "text-gray-500",
     },

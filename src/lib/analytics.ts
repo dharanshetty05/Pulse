@@ -2,7 +2,7 @@ import { Company } from "@prisma/client";
 import { isToday } from "./date";
 
 export function getStats(companies: Company[]) {
-  const totalLeads = companies.length;
+  const totalCompanies = companies.length;
 
   const dmsSent = companies.filter(
     (company) => company.status !== "NEW"
@@ -37,7 +37,7 @@ export function getStats(companies: Company[]) {
       : 0;
 
   return {
-    totalLeads,
+    totalCompanies,
     messagedToday,
     replies,
     interested,

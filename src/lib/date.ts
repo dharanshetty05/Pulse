@@ -1,4 +1,4 @@
-export function parseLeadDate(dateString: string) {
+export function parseDate(dateString: string) {
   const [day, month, year] = dateString
     .split("/")
     .map(Number);
