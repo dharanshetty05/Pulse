@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback, useTransition } from "react";
 import { Company, Group } from "@prisma/client";
 import CompaniesTable from "./CompaniesTable";
 import { isToday, isThisWeek, isThisMonth } from "@/lib/date";
-import { Search, MapPin, X, Filter, ArrowUpDown } from "lucide-react";
+import { Search, MapPin, X, Filter, ArrowUpDown, Play } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { startSessionAction } from "@/app/actions/sessions";
 import CompanyPreviewPanel from "./CompanyPreviewPanel";
 
 interface CompanyWithGroups extends Company {
@@ -15,7 +16,7 @@ interface CompanyWithGroups extends Company {
 
 interface Props {
   companies: CompanyWithGroups[];
-  groups: Group[];
+  groups: (Group & { _count: { companies: number } })[];
 }
 
 const DATE_FILTERS = [
@@ -53,21 +54,36 @@ export default function CompaniesSearch({ companies, groups }: Props) {
   const urlQuery = searchParams.get("query") || "";
   const urlCity = searchParams.get("city") || "All";
   const urlStatus = searchParams.get("status") || "All";
-  const urlDate = searchParams.get("date") || "all"; // changed default to all for url-based, or week? Let's use all.
+  const urlDate = searchParams.get("date") || "all"; 
   const urlSort = searchParams.get("sort") || "newest";
   const urlGroup = searchParams.get("group") || "All";
   const urlPreview = searchParams.get("preview");
+  const urlFollowup = searchParams.get("followup");
 
   // Local state for immediate typing feedback on search
   const [localQuery, setLocalQuery] = useState(urlQuery);
+  const [isPending, startTransition] = useTransition();
+  const [isStartingFocusMode, setIsStartingFocusMode] = useState(false);
+
+  // Sync local query when URL changes (e.g. back button)
+  useEffect(() => {
+    setLocalQuery(urlQuery);
+  }, [urlQuery]);
 
   // Sync query to URL with debounce
   useEffect(() => {
     const timer = setTimeout(() => {
-      updateUrl("query", localQuery);
+      if (localQuery !== urlQuery) {
+        const params = new URLSearchParams(searchParams.toString());
+        if (localQuery) params.set("query", localQuery);
+        else params.delete("query");
+        startTransition(() => {
+          router.push(`${pathname}?${params.toString()}`, { scroll: false });
+        });
+      }
     }, 300);
     return () => clearTimeout(timer);
-  }, [localQuery]);
+  }, [localQuery, urlQuery, pathname, router, searchParams]);
 
   const updateUrl = useCallback((key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -102,8 +118,27 @@ export default function CompaniesSearch({ companies, groups }: Props) {
       if (urlDate === "today") matchesDate = isToday(compDate);
       if (urlDate === "week") matchesDate = isThisWeek(compDate);
       if (urlDate === "month") matchesDate = isThisMonth(compDate);
+
+      let matchesFollowup = true;
+      if (urlFollowup) {
+        if (!company.followUpDate) {
+          matchesFollowup = false;
+        } else {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const tomorrow = new Date(today);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          const fDate = new Date(company.followUpDate);
+          fDate.setHours(0,0,0,0);
+          
+          if (urlFollowup === "today") matchesFollowup = fDate.getTime() === today.getTime();
+          else if (urlFollowup === "tomorrow") matchesFollowup = fDate.getTime() === tomorrow.getTime();
+          else if (urlFollowup === "overdue") matchesFollowup = fDate.getTime() < today.getTime();
+          else if (urlFollowup === "upcoming") matchesFollowup = fDate.getTime() > today.getTime();
+        }
+      }
       
-      return matchesSearch && matchesCity && matchesStatus && matchesDate && matchesGroup;
+      return matchesSearch && matchesCity && matchesStatus && matchesDate && matchesGroup && matchesFollowup;
     });
 
     result.sort((a, b) => {
@@ -124,14 +159,28 @@ export default function CompaniesSearch({ companies, groups }: Props) {
     });
 
     return result;
-  }, [companies, urlQuery, urlCity, urlStatus, urlDate, urlSort, urlGroup]);
+  }, [companies, urlQuery, urlCity, urlStatus, urlDate, urlSort, urlGroup, urlFollowup]);
 
   const cities = ["All", ...new Set(companies.map((c) => c.city).filter(Boolean) as string[])];
-  const hasActiveFilters = urlQuery !== "" || urlCity !== "All" || urlStatus !== "All" || urlGroup !== "All" || urlDate !== "all";
+  const hasActiveFilters = urlQuery !== "" || urlCity !== "All" || urlStatus !== "All" || urlGroup !== "All" || urlDate !== "all" || !!urlFollowup;
 
   const clearFilters = () => {
     setLocalQuery("");
     router.push(pathname, { scroll: false });
+  };
+
+  const handleEnterFocusMode = async () => {
+    if (filteredAndSortedCompanies.length === 0) return;
+    setIsStartingFocusMode(true);
+    const session = await startSessionAction(
+      filteredAndSortedCompanies.map(c => c.id),
+      window.location.search
+    );
+    if (session) {
+      router.push(`/session/${session.id}`);
+    } else {
+      setIsStartingFocusMode(false);
+    }
   };
 
   return (
@@ -185,6 +234,21 @@ export default function CompaniesSearch({ companies, groups }: Props) {
             </button>
           ))}
         </div>
+        
+        <button
+          onClick={handleEnterFocusMode}
+          disabled={isStartingFocusMode || filteredAndSortedCompanies.length === 0}
+          className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
+        >
+          {isStartingFocusMode ? (
+            <span className="animate-pulse">Loading...</span>
+          ) : (
+            <>
+              <Play className="w-4 h-4" fill="currentColor" />
+              Focus Mode
+            </>
+          )}
+        </button>
       </div>
 
       {/* Search + Filters row */}

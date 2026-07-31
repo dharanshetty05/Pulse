@@ -35,12 +35,53 @@ model Company {
   status       Status   @default(NEW)
   notes        String?
   isPinned     Boolean  @default(false)
+  followUpDate DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   
   importedFrom ImportCompany[]
   groups       Group[]
   timelineNotes Note[]
+  outreachSessions OutreachSessionCompany[]
+}
+
+enum SessionStatus {
+  ACTIVE
+  COMPLETED
+  DISCARDED
+}
+
+enum SessionCompanyState {
+  PENDING
+  CURRENT
+  COMPLETED
+  SKIPPED
+}
+
+model OutreachSession {
+  id               String   @id @default(uuid())
+  status           SessionStatus @default(ACTIVE)
+  startedAt        DateTime @default(now())
+  completedAt      DateTime?
+  currentCompanyId String?
+  filtersSnapshot  String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  companies        OutreachSessionCompany[]
+}
+
+model OutreachSessionCompany {
+  id           String   @id @default(uuid())
+  sessionId    String
+  companyId    String
+  session      OutreachSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  queuePosition Int
+  state        SessionCompanyState @default(PENDING)
+  completedAt  DateTime?
+
+  @@unique([sessionId, companyId])
 }
 
 model Note {

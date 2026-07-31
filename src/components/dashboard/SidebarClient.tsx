@@ -13,6 +13,8 @@ import {
   Plus,
   History,
   Pin,
+  Calendar,
+  ThumbsUp
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createGroupAction } from "@/app/actions/groups";
@@ -147,6 +149,37 @@ export default function SidebarClient({ groups, pinnedCompanies }: Props) {
             </div>
           </div>
         )}
+
+        {/* Follow-Up Workspace */}
+        <div className="px-3 py-2 border-b border-gray-100">
+          <div className="flex items-center px-3 py-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+              Follow-Up Workspace
+            </span>
+          </div>
+          <div className="space-y-0.5">
+            <Link href="/companies?status=FOLLOW_UP" className="group flex items-center gap-2.5 px-3 py-1.5 rounded-md text-sm hover:bg-gray-50 transition-colors">
+              <Clock className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+              <span className="text-gray-500 group-hover:text-gray-900 truncate font-medium">Needs Follow Up</span>
+            </Link>
+            <Link href="/companies?status=INTERESTED" className="group flex items-center gap-2.5 px-3 py-1.5 rounded-md text-sm hover:bg-gray-50 transition-colors">
+              <ThumbsUp className="w-3.5 h-3.5 text-green-400 shrink-0" />
+              <span className="text-gray-500 group-hover:text-gray-900 truncate font-medium">Interested</span>
+            </Link>
+            <Link href="/companies?followup=today" className="group flex items-center gap-2.5 px-3 py-1.5 rounded-md text-sm hover:bg-gray-50 transition-colors">
+              <Calendar className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+              <span className="text-gray-500 group-hover:text-gray-900 truncate font-medium">Today's Follow Ups</span>
+            </Link>
+            <Link href="/companies?followup=overdue" className="group flex items-center gap-2.5 px-3 py-1.5 rounded-md text-sm hover:bg-gray-50 transition-colors">
+              <Clock className="w-3.5 h-3.5 text-red-400 shrink-0" />
+              <span className="text-gray-500 group-hover:text-gray-900 truncate font-medium text-red-600">Overdue</span>
+            </Link>
+            <Link href="/companies?followup=upcoming" className="group flex items-center gap-2.5 px-3 py-1.5 rounded-md text-sm hover:bg-gray-50 transition-colors">
+              <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+              <span className="text-gray-500 group-hover:text-gray-900 truncate font-medium">Upcoming</span>
+            </Link>
+          </div>
+        </div>
 
         {/* Groups */}
         <div className="px-3 py-2 border-b border-gray-100">

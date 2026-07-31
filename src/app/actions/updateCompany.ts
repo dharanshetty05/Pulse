@@ -15,6 +15,7 @@ export async function updateCompanyAction(
     email?: string;
     phone?: string;
     isPinned?: boolean;
+    followUpDate?: Date | null;
     connectGroup?: string;
     disconnectGroup?: string;
   }
@@ -28,6 +29,7 @@ export async function updateCompanyAction(
   if (updates.email !== undefined) data.email = updates.email;
   if (updates.phone !== undefined) data.phone = updates.phone;
   if (updates.isPinned !== undefined) data.isPinned = updates.isPinned;
+  if (updates.followUpDate !== undefined) data.followUpDate = updates.followUpDate;
 
   if (updates.connectGroup) {
     data.groups = { connect: { id: updates.connectGroup } };
