@@ -11,11 +11,12 @@ import {
   Zap,
   Folder,
   Plus,
-  MoreVertical,
+  History,
+  Pin,
 } from "lucide-react";
-import { useState } from "react";
-import { createGroupAction, deleteGroupAction } from "@/app/actions/groups";
-import { Group } from "@prisma/client";
+import { useState, useEffect } from "react";
+import { createGroupAction } from "@/app/actions/groups";
+import { Group, Company } from "@prisma/client";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -26,13 +27,39 @@ const navItems = [
 
 interface Props {
   groups: (Group & { _count: { companies: number } })[];
+  pinnedCompanies: Company[];
 }
 
-export default function SidebarClient({ groups }: Props) {
+export function addRecentlyViewed(company: { id: string, name: string }) {
+  try {
+    const existingStr = localStorage.getItem("pulse-recently-viewed");
+    let existing: { id: string, name: string }[] = existingStr ? JSON.parse(existingStr) : [];
+    existing = existing.filter(c => c.id !== company.id);
+    existing.unshift(company);
+    if (existing.length > 10) existing = existing.slice(0, 10);
+    localStorage.setItem("pulse-recently-viewed", JSON.stringify(existing));
+    window.dispatchEvent(new Event("recently-viewed-updated"));
+  } catch (e) {}
+}
+
+export default function SidebarClient({ groups, pinnedCompanies }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
+  const [recentlyViewed, setRecentlyViewed] = useState<{id: string, name: string}[]>([]);
+
+  useEffect(() => {
+    const loadRecentlyViewed = () => {
+      try {
+        const existingStr = localStorage.getItem("pulse-recently-viewed");
+        if (existingStr) setRecentlyViewed(JSON.parse(existingStr));
+      } catch (e) {}
+    };
+    loadRecentlyViewed();
+    window.addEventListener("recently-viewed-updated", loadRecentlyViewed);
+    return () => window.removeEventListener("recently-viewed-updated", loadRecentlyViewed);
+  }, []);
 
   const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,7 +73,7 @@ export default function SidebarClient({ groups }: Props) {
   return (
     <aside className="w-56 shrink-0 border-r border-gray-100 min-h-screen flex flex-col bg-white">
       {/* Logo */}
-      <div className="px-5 py-5 border-b border-gray-100">
+      <div className="px-5 py-5 border-b border-gray-100 shrink-0">
         <Link href="/dashboard" className="flex items-center gap-2.5 group">
           <div className="w-7 h-7 rounded-lg bg-gray-900 flex items-center justify-center shrink-0 group-hover:bg-gray-700 transition-colors duration-150">
             <Zap className="w-3.5 h-3.5 text-white fill-white" />
@@ -59,7 +86,7 @@ export default function SidebarClient({ groups }: Props) {
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
         {/* Main Nav */}
-        <nav className="px-3 py-4 space-y-0.5">
+        <nav className="px-3 py-4 space-y-0.5 border-b border-gray-100">
           {navItems.map((item) => {
             const isActive =
               pathname === item.href ||
@@ -96,8 +123,33 @@ export default function SidebarClient({ groups }: Props) {
           })}
         </nav>
 
+        {/* Pinned Companies */}
+        {pinnedCompanies.length > 0 && (
+          <div className="px-3 py-2 border-b border-gray-100">
+            <div className="flex items-center px-3 py-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                Pinned
+              </span>
+            </div>
+            <div className="space-y-0.5">
+              {pinnedCompanies.map(c => (
+                <Link
+                  key={c.id}
+                  href={`/companies?preview=${c.id}`}
+                  className="group flex items-center gap-2.5 px-3 py-1.5 rounded-md text-sm hover:bg-gray-50 transition-colors"
+                >
+                  <Pin className="w-3.5 h-3.5 text-orange-400 shrink-0 fill-orange-400/20" />
+                  <span className="text-gray-500 group-hover:text-gray-900 truncate font-medium">
+                    {c.businessName}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Groups */}
-        <div className="px-3 py-2">
+        <div className="px-3 py-2 border-b border-gray-100">
           <div className="flex items-center justify-between px-3 py-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
               Groups
@@ -138,7 +190,6 @@ export default function SidebarClient({ groups }: Props) {
             </AnimatePresence>
 
             {groups.map((group) => {
-              // Create a URL params string for the group filter
               const params = new URLSearchParams();
               params.set("group", group.name);
               const href = `/companies?${params.toString()}`;
@@ -163,6 +214,31 @@ export default function SidebarClient({ groups }: Props) {
             })}
           </div>
         </div>
+
+        {/* Recently Viewed */}
+        {recentlyViewed.length > 0 && (
+          <div className="px-3 py-2 mb-4">
+            <div className="flex items-center px-3 py-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                Recently Viewed
+              </span>
+            </div>
+            <div className="space-y-0.5">
+              {recentlyViewed.map(c => (
+                <Link
+                  key={c.id}
+                  href={`/companies?preview=${c.id}`}
+                  className="group flex items-center gap-2.5 px-3 py-1.5 rounded-md text-sm hover:bg-gray-50 transition-colors"
+                >
+                  <History className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                  <span className="text-gray-500 group-hover:text-gray-900 truncate font-medium">
+                    {c.name}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </aside>
   );

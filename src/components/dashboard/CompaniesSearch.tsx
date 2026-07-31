@@ -7,6 +7,7 @@ import { isToday, isThisWeek, isThisMonth } from "@/lib/date";
 import { Search, MapPin, X, Filter, ArrowUpDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import CompanyPreviewPanel from "./CompanyPreviewPanel";
 
 interface CompanyWithGroups extends Company {
   groups: Group[];
@@ -55,6 +56,7 @@ export default function CompaniesSearch({ companies, groups }: Props) {
   const urlDate = searchParams.get("date") || "all"; // changed default to all for url-based, or week? Let's use all.
   const urlSort = searchParams.get("sort") || "newest";
   const urlGroup = searchParams.get("group") || "All";
+  const urlPreview = searchParams.get("preview");
 
   // Local state for immediate typing feedback on search
   const [localQuery, setLocalQuery] = useState(urlQuery);
@@ -324,6 +326,15 @@ export default function CompaniesSearch({ companies, groups }: Props) {
         groups={groups}
         isSearchActive={hasActiveFilters}
       />
+
+      <AnimatePresence>
+        {urlPreview && (
+          <CompanyPreviewPanel 
+            previewId={urlPreview} 
+            companyIds={filteredAndSortedCompanies.map(c => c.id)} 
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

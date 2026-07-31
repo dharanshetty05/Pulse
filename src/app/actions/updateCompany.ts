@@ -14,6 +14,7 @@ export async function updateCompanyAction(
     instagram?: string;
     email?: string;
     phone?: string;
+    isPinned?: boolean;
     connectGroup?: string;
     disconnectGroup?: string;
   }
@@ -26,6 +27,7 @@ export async function updateCompanyAction(
   if (updates.instagram !== undefined) data.instagram = updates.instagram;
   if (updates.email !== undefined) data.email = updates.email;
   if (updates.phone !== undefined) data.phone = updates.phone;
+  if (updates.isPinned !== undefined) data.isPinned = updates.isPinned;
 
   if (updates.connectGroup) {
     data.groups = { connect: { id: updates.connectGroup } };

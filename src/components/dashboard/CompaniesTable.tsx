@@ -210,6 +210,12 @@ export default function CompaniesTable({ companies, groups, isSearchActive }: Pr
     router.refresh();
   };
 
+  const openPreview = (id: string) => {
+    const searchParams = new URLSearchParams(window.location.search);
+    searchParams.set("preview", id);
+    router.push(`/companies?${searchParams.toString()}`, { scroll: false });
+  };
+
   return (
     <div className="space-y-3">
       {/* Bulk actions bar */}
@@ -356,7 +362,7 @@ export default function CompaniesTable({ companies, groups, isSearchActive }: Pr
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Building2 className="h-3.5 w-3.5 shrink-0 text-gray-400 group-hover:text-gray-500 transition-colors" strokeWidth={1.5} />
-                        <span className="font-medium text-gray-900 leading-tight cursor-pointer hover:underline" onClick={() => router.push(`/companies/${company.id}`)}>
+                        <span className="font-medium text-gray-900 leading-tight cursor-pointer hover:underline" onClick={() => openPreview(company.id)}>
                           {company.businessName}
                         </span>
                       </div>
@@ -397,9 +403,9 @@ export default function CompaniesTable({ companies, groups, isSearchActive }: Pr
                     <td className="px-4 py-3">
                       <div className="flex justify-end items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
-                          onClick={() => router.push(`/companies/${company.id}`)}
+                          onClick={() => openPreview(company.id)}
                           className="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
-                          title="Open details"
+                          title="Open preview"
                         >
                           <Edit3 className="h-3.5 w-3.5" />
                         </button>

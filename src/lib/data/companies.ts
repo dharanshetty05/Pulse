@@ -11,6 +11,20 @@ export async function getCompanies() {
 export async function getCompanyById(id: string) {
   return db.company.findUnique({
     where: { id },
+    include: {
+      groups: true,
+      timelineNotes: {
+        orderBy: { createdAt: "desc" }
+      }
+    }
+  });
+}
+
+export async function getPinnedCompanies() {
+  return db.company.findMany({
+    where: { isPinned: true },
+    orderBy: { updatedAt: "desc" },
+    include: { groups: true }
   });
 }
 
