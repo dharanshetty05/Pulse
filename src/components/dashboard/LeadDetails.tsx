@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Lead } from "@/types/lead";
+import { Company } from "@prisma/client";
 import LeadEditor from "./LeadEditor";
 import StatusBadge from "./StatusBadge";
 import {
@@ -13,11 +13,13 @@ import {
   Pencil,
   X,
   Heart,
+  Mail,
+  Phone
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Props {
-  lead: Lead;
+  lead: Company;
 }
 
 interface FieldRowProps {
@@ -62,7 +64,7 @@ export default function LeadDetails({ lead }: Props) {
               {lead.businessName}
             </h1>
             <div className="mt-1">
-              <StatusBadge status={lead.responseStatus} />
+              <StatusBadge status={lead.status} />
             </div>
           </div>
         </div>
@@ -100,10 +102,9 @@ export default function LeadDetails({ lead }: Props) {
               Edit Lead
             </p>
             <LeadEditor
-              rowNumber={lead.rowNumber}
-              currentStatus={lead.responseStatus}
-              currentMeeting={lead.meetingBooked}
-              currentNotes={lead.notes}
+              id={lead.id}
+              currentStatus={lead.status}
+              currentNotes={lead.notes || ""}
             />
           </motion.div>
         )}
@@ -115,10 +116,13 @@ export default function LeadDetails({ lead }: Props) {
         <div className="px-4 py-2">
           <FieldRow icon={<MapPin className="h-4 w-4" strokeWidth={1.5} />} label="City" value={lead.city} />
 
+          <FieldRow icon={<Mail className="h-4 w-4" strokeWidth={1.5} />} label="Email" value={lead.email} />
+          <FieldRow icon={<Phone className="h-4 w-4" strokeWidth={1.5} />} label="Phone" value={lead.phone} />
+
           <FieldRow icon={<Heart className="h-4 w-4" strokeWidth={1.5} />} label="Instagram">
-            {lead.instagramId ? (
+            {lead.instagram ? (
               <a
-                href={lead.instagramId}
+                href={lead.instagram.startsWith("http") ? lead.instagram : `https://instagram.com/${lead.instagram}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm text-blue-600 hover:text-blue-700 hover:underline transition-colors"
@@ -133,7 +137,7 @@ export default function LeadDetails({ lead }: Props) {
           <FieldRow icon={<Globe className="h-4 w-4" strokeWidth={1.5} />} label="Website">
             {lead.website ? (
               <a
-                href={lead.website}
+                href={lead.website.startsWith("http") ? lead.website : `https://${lead.website}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm text-blue-600 hover:text-blue-700 hover:underline transition-colors"
@@ -148,10 +152,8 @@ export default function LeadDetails({ lead }: Props) {
 
         {/* Timeline section */}
         <div className="px-4 py-2">
-          <FieldRow icon={<Calendar className="h-4 w-4" strokeWidth={1.5} />} label="Date Contacted" value={lead.dateContacted} />
-          <FieldRow icon={<Calendar className="h-4 w-4" strokeWidth={1.5} />} label="Follow Up 1" value={lead.followUp1} />
-          <FieldRow icon={<Calendar className="h-4 w-4" strokeWidth={1.5} />} label="Follow Up 2" value={lead.followUp2} />
-          <FieldRow icon={<Calendar className="h-4 w-4" strokeWidth={1.5} />} label="Meeting Booked" value={lead.meetingBooked} />
+          <FieldRow icon={<Calendar className="h-4 w-4" strokeWidth={1.5} />} label="Created At" value={lead.createdAt.toLocaleDateString()} />
+          <FieldRow icon={<Calendar className="h-4 w-4" strokeWidth={1.5} />} label="Last Updated" value={lead.updatedAt.toLocaleDateString()} />
         </div>
 
         {/* Notes section */}

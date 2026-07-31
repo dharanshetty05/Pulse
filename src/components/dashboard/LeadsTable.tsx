@@ -1,13 +1,13 @@
 "use client";
 
-import { Lead } from "@/types/lead";
+import { Company } from "@prisma/client";
 import StatusBadge from "./StatusBadge";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Building2, MapPin, Inbox } from "lucide-react";
 
 interface Props {
-  leads: Lead[];
+  leads: Company[];
 }
 
 const rowVariants = {
@@ -63,12 +63,12 @@ export default function LeadsTable({ leads }: Props) {
             ) : (
               leads.map((lead, i) => (
                 <motion.tr
-                  key={lead.leadId}
+                  key={lead.id}
                   custom={i}
                   initial="hidden"
                   animate="visible"
                   variants={rowVariants}
-                  onClick={() => router.push(`/leads/${lead.leadId}`)}
+                  onClick={() => router.push(`/leads/${lead.id}`)}
                   className={`
                     group relative cursor-pointer border-b border-gray-100 transition-colors
                     hover:bg-gray-50/80
@@ -90,14 +90,14 @@ export default function LeadsTable({ leads }: Props) {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5 text-gray-500">
                       <MapPin className="h-3 w-3 shrink-0 text-gray-300" strokeWidth={1.5} />
-                      <span>{lead.city}</span>
+                      <span>{lead.city || <span className="text-gray-300">—</span>}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <StatusBadge status={lead.responseStatus} />
+                    <StatusBadge status={lead.status} />
                   </td>
                   <td className="px-4 py-3 text-gray-500 tabular-nums">
-                    {lead.dateContacted || <span className="text-gray-300">—</span>}
+                    {lead.createdAt.toLocaleDateString()}
                   </td>
                 </motion.tr>
               ))

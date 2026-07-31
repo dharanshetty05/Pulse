@@ -1,17 +1,15 @@
 "use server";
 
-import { updateLead } from "@/lib/sheets";
+import { updateCompany } from "@/lib/data/companies";
+import { Status } from "@prisma/client";
 
 export async function updateLeadAction(
-  rowNumber: number,
-  responseStatus: string,
-  meetingBooked: string,
+  id: string,
+  status: string,
   notes: string
 ) {
-  await updateLead(
-    rowNumber,
-    responseStatus,
-    meetingBooked,
-    notes
-  );
+  await updateCompany(id, {
+    status: status as Status,
+    notes,
+  });
 }

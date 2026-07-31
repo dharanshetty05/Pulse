@@ -1,9 +1,9 @@
-import { getLeads } from "@/lib/sheets";
+import { getCompanies } from "@/lib/data/companies";
 import DashboardPage from "./dashboard/page";
 import { getStats } from "@/lib/analytics";
 
 export default async function Home() {
-  const leads = await getLeads();
+  const leads = await getCompanies();
   const stats = getStats(leads);
 
 

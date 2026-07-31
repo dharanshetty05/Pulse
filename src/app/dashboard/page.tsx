@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { getLeads } from "@/lib/sheets";
+import { getCompanies } from "@/lib/data/companies";
 import { getStats } from "@/lib/analytics";
 import StatsGrid from "@/components/dashboard/StatsGrid";
 
@@ -20,7 +20,7 @@ function getFormattedDate() {
 }
 
 export default async function DashboardPage() {
-  const leads = await getLeads();
+  const leads = await getCompanies();
   const stats = getStats(leads);
 
   return (

@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { getLeads } from "@/lib/sheets";
+import { getCompanyById } from "@/lib/data/companies";
 import LeadDetails from "@/components/dashboard/LeadDetails";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -11,8 +11,7 @@ export default async function LeadPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const leads = await getLeads();
-  const lead = leads.find((lead) => lead.leadId === id);
+  const lead = await getCompanyById(id);
 
   if (!lead) {
     return (

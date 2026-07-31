@@ -1,14 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Lead } from "@/types/lead";
+import { Company } from "@prisma/client";
 import LeadsTable from "./LeadsTable";
-import { parseLeadDate, isToday, isThisWeek, isThisMonth } from "@/lib/date";
+import { isToday, isThisWeek, isThisMonth } from "@/lib/date";
 import { Search, MapPin, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Props {
-  leads: Lead[];
+  leads: Company[];
 }
 
 const DATE_FILTERS = [
@@ -29,7 +29,7 @@ export default function LeadsSearch({ leads }: Props) {
         .toLowerCase()
         .includes(query.toLowerCase());
       const matchesCity = city === "All" || lead.city === city;
-      const leadDate = parseLeadDate(lead.dateContacted);
+      const leadDate = lead.createdAt;
       let matchesDate = true;
       if (filter === "today") matchesDate = isToday(leadDate);
       if (filter === "week") matchesDate = isThisWeek(leadDate);
@@ -38,7 +38,7 @@ export default function LeadsSearch({ leads }: Props) {
     });
   }, [leads, query, city, filter]);
 
-  const cities = ["All", ...new Set(leads.map((lead) => lead.city))];
+  const cities = ["All", ...new Set(leads.map((lead) => lead.city).filter(Boolean) as string[])];
 
   const hasActiveFilters = query !== "" || city !== "All";
 

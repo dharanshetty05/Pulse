@@ -1,24 +1,27 @@
 "use server";
 
-import { createLead } from "@/lib/sheets";
+import { createCompany } from "@/lib/data/companies";
+import { createCompanySchema } from "@/lib/validations/company";
 import { redirect } from "next/navigation";
 
-export async function createLeadAction(
-    formData: FormData
-    ) {
-    await createLead({
-        businessName:
-        formData.get("businessName") as string,
+export async function createLeadAction(formData: FormData) {
+  const result = createCompanySchema.safeParse({
+    businessName: formData.get("businessName"),
+    city: formData.get("city"),
+    instagram: formData.get("instagramId"),
+    website: formData.get("website"),
+  });
 
-        city:
-        formData.get("city") as string,
+  if (!result.success) {
+    throw new Error(result.error.message);
+  }
 
-        instagramId:
-        formData.get("instagramId") as string,
+  await createCompany({
+    businessName: result.data.businessName,
+    city: result.data.city,
+    instagram: result.data.instagram,
+    website: result.data.website,
+  });
 
-        website:
-        formData.get("website") as string,
-    });
-
-    redirect("/leads");
+  redirect("/leads");
 }

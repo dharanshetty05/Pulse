@@ -1,42 +1,40 @@
-import { Lead } from "@/types/lead";
-import { parseLeadDate, isToday } from "./date";
+import { Company } from "@prisma/client";
+import { isToday } from "./date";
 
-export function getStats(leads: Lead[]) {
-  const totalLeads = leads.length;
+export function getStats(companies: Company[]) {
+  const totalLeads = companies.length;
 
-  const dmsSent = leads.filter(
-    (lead) => lead.coldDmSent === "Yes"
+  const dmsSent = companies.filter(
+    (company) => company.status !== "NEW"
   ).length;
 
-  const messagedToday = leads.filter(
-    (lead) =>
-      isToday(
-        parseLeadDate(
-          lead.dateContacted
-        )
-      )
+  const messagedToday = companies.filter(
+    (company) => isToday(company.createdAt)
   ).length;
 
-  const replies = leads.filter(
-    (lead) =>
-      lead.responseStatus === "Replied" ||
-      lead.responseStatus === "Interested"
+  const replies = companies.filter(
+    (company) =>
+      company.status === "INTERESTED" ||
+      company.status === "MEETING_BOOKED" ||
+      company.status === "CLIENT" ||
+      company.status === "CONTACTED" ||
+      company.status === "FOLLOW_UP"
   ).length;
 
-  const interested = leads.filter(
-    (lead) =>
-      lead.responseStatus === "Interested"
+  const interested = companies.filter(
+    (company) =>
+      company.status === "INTERESTED"
   ).length;
 
-  const meetings = leads.filter(
-    (lead) =>
-      lead.meetingBooked === "Yes"
+  const meetings = companies.filter(
+    (company) =>
+      company.status === "MEETING_BOOKED"
   ).length;
 
-const replyRate =
-  dmsSent > 0
-    ? Number(((replies / dmsSent) * 100).toFixed(1))
-    : 0;
+  const replyRate =
+    dmsSent > 0
+      ? Number(((replies / dmsSent) * 100).toFixed(1))
+      : 0;
 
   return {
     totalLeads,

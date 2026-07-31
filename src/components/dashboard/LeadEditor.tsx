@@ -7,22 +7,19 @@ import { Check, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Props {
-  rowNumber: number;
+  id: string;
   currentStatus: string;
-  currentMeeting: string;
   currentNotes: string;
 }
 
 const STATUS_OPTIONS = [
-  "New Lead",
-  "Msg Sent",
-  "Replied",
-  "Interested",
-  "Seen",
-  "No reply",
-  "Not interested",
-  "Follow Up",
-  "Follow Up 2",
+  "NEW",
+  "CONTACTED",
+  "FOLLOW_UP",
+  "INTERESTED",
+  "MEETING_BOOKED",
+  "CLIENT",
+  "CLOSED",
 ];
 
 const labelClass =
@@ -48,22 +45,20 @@ function SelectChevron() {
 }
 
 export default function LeadEditor({
-  rowNumber,
+  id,
   currentStatus,
-  currentMeeting,
   currentNotes,
 }: Props) {
   const router = useRouter();
   const [status, setStatus] = useState(currentStatus);
-  const [meeting, setMeeting] = useState(currentMeeting);
-  const [notes, setNotes] = useState(currentNotes);
+  const [notes, setNotes] = useState(currentNotes || "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   async function handleSave() {
     setSaving(true);
     setSaved(false);
-    await updateLeadAction(rowNumber, status, meeting, notes);
+    await updateLeadAction(id, status, notes);
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -72,7 +67,6 @@ export default function LeadEditor({
 
   const isDirty =
     status !== currentStatus ||
-    meeting !== currentMeeting ||
     notes !== currentNotes;
 
   return (
@@ -96,21 +90,7 @@ export default function LeadEditor({
         </div>
       </div>
 
-      {/* Meeting Booked */}
-      <div>
-        <label className={labelClass}>Meeting Booked</label>
-        <div className={fieldWrapper}>
-          <select
-            value={meeting}
-            onChange={(e) => setMeeting(e.target.value)}
-            className={selectClass}
-          >
-            <option value="Yes">Yes</option>
-            <option value="No">No</option>
-          </select>
-          <SelectChevron />
-        </div>
-      </div>
+
 
       {/* Notes */}
       <div>

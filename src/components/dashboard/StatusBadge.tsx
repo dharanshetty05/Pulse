@@ -9,47 +9,37 @@ type BadgeConfig = {
 };
 
 const STATUS_STYLES: Record<string, BadgeConfig> = {
-  "New Lead": {
+  NEW: {
     container: "bg-slate-100 border-slate-200",
     dot: "bg-slate-400",
     label: "text-slate-600",
   },
-  "Msg Sent": {
+  CONTACTED: {
     container: "bg-violet-50 border-violet-200",
     dot: "bg-violet-400",
     label: "text-violet-700",
   },
-  Seen: {
-    container: "bg-amber-50 border-amber-200",
-    dot: "bg-amber-400",
-    label: "text-amber-700",
-  },
-  Replied: {
-    container: "bg-blue-50 border-blue-200",
-    dot: "bg-blue-400",
-    label: "text-blue-700",
-  },
-  Interested: {
-    container: "bg-emerald-50 border-emerald-200",
-    dot: "bg-emerald-400",
-    label: "text-emerald-700",
-  },
-  "Follow Up": {
+  FOLLOW_UP: {
     container: "bg-orange-50 border-orange-200",
     dot: "bg-orange-400",
     label: "text-orange-700",
   },
-  "Follow Up 2": {
-    container: "bg-rose-50 border-rose-200",
-    dot: "bg-rose-400",
-    label: "text-rose-700",
+  INTERESTED: {
+    container: "bg-emerald-50 border-emerald-200",
+    dot: "bg-emerald-400",
+    label: "text-emerald-700",
   },
-  "No reply": {
-    container: "bg-gray-100 border-gray-200",
-    dot: "bg-gray-400",
-    label: "text-gray-500",
+  MEETING_BOOKED: {
+    container: "bg-amber-50 border-amber-200",
+    dot: "bg-amber-400",
+    label: "text-amber-700",
   },
-  "Not interested": {
+  CLIENT: {
+    container: "bg-blue-50 border-blue-200",
+    dot: "bg-blue-400",
+    label: "text-blue-700",
+  },
+  CLOSED: {
     container: "bg-red-50 border-red-200",
     dot: "bg-red-400",
     label: "text-red-700",

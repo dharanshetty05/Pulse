@@ -1,16 +1,14 @@
 export const dynamic = "force-dynamic";
 
-import { getLeads } from "@/lib/sheets";
+import { getCompanies } from "@/lib/data/companies";
 import LeadsSearch from "@/components/dashboard/LeadsSearch";
+import { isToday } from "@/lib/date";
 
 export default async function LeadsPage() {
-  const leads = await getLeads();
+  const leads = await getCompanies();
 
   const totalLeads = leads.length;
-  const contactedToday = leads.filter((l) => {
-    const { isToday, parseLeadDate } = require("@/lib/date");
-    return isToday(parseLeadDate(l.dateContacted));
-  }).length;
+  const contactedToday = leads.filter((l) => isToday(l.createdAt)).length;
 
   return (
     <div className="space-y-6">
