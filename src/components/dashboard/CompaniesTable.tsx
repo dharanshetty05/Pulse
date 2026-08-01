@@ -2,13 +2,43 @@
 
 import { Company, Status, Group, Tag } from "@prisma/client";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+// import { motion, AnimatePresence } from "framer-motion";
 import { Building2, MapPin, Inbox, Edit3, Trash2, Globe, Heart, Mail, Phone } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/components/ui/toast";
 import { deleteCompanyAction } from "@/app/actions/deleteCompany";
 import { updateCompanyAction } from "@/app/actions/updateCompany";
 import { getTagColorClasses } from "@/lib/tagColors";
+
+import {
+  motion,
+  AnimatePresence,
+  easeOut,
+  type Variants,
+} from "framer-motion";
+
+const rowVariants: Variants = {
+  hidden: {
+    opacity: 0,
+    y: 6,
+  },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      delay: i * 0.03,
+      duration: 0.2,
+      ease: easeOut,
+    },
+  }),
+  exit: {
+    opacity: 0,
+    x: -10,
+    transition: {
+      duration: 0.2,
+    },
+  },
+};
 
 interface CompanyWithGroupsAndTags extends Company {
   groups: Group[];
@@ -22,19 +52,19 @@ interface Props {
   isSearchActive?: boolean;
 }
 
-const rowVariants = {
-  hidden: { opacity: 0, y: 6 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: {
-      delay: i * 0.03,
-      duration: 0.2,
-      ease: "easeOut",
-    },
-  }),
-  exit: { opacity: 0, x: -10, transition: { duration: 0.2 } },
-};
+// const rowVariants = {
+//   hidden: { opacity: 0, y: 6 },
+//   visible: (i: number) => ({
+//     opacity: 1,
+//     y: 0,
+//     transition: {
+//       delay: i * 0.03,
+//       duration: 0.2,
+//       ease: "easeOut",
+//     },
+//   }),
+//   exit: { opacity: 0, x: -10, transition: { duration: 0.2 } },
+// };
 
 function EditableCell({ 
   value, 

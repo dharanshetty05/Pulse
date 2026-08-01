@@ -58,7 +58,7 @@ export default function CompanyEditor({
   async function handleSave() {
     setSaving(true);
     setSaved(false);
-    await updateCompanyAction(id, status, notes);
+    await updateCompanyAction(id,{ status: status, notes: notes });
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
