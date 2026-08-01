@@ -1,6 +1,6 @@
 "use client";
 
-import { Company, Status, Group } from "@prisma/client";
+import { Company, Status, Group, Tag } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Building2, MapPin, Inbox, Edit3, Trash2, Globe, Heart, Mail, Phone } from "lucide-react";
@@ -8,14 +8,17 @@ import { useState } from "react";
 import { useToast } from "@/components/ui/toast";
 import { deleteCompanyAction } from "@/app/actions/deleteCompany";
 import { updateCompanyAction } from "@/app/actions/updateCompany";
+import { getTagColorClasses } from "@/lib/tagColors";
 
-interface CompanyWithGroups extends Company {
+interface CompanyWithGroupsAndTags extends Company {
   groups: Group[];
+  tags: Tag[];
 }
 
 interface Props {
-  companies: CompanyWithGroups[];
+  companies: CompanyWithGroupsAndTags[];
   groups: Group[];
+  tags: Tag[];
   isSearchActive?: boolean;
 }
 
@@ -97,7 +100,7 @@ function EditableCell({
   );
 }
 
-export default function CompaniesTable({ companies, groups, isSearchActive }: Props) {
+export default function CompaniesTable({ companies, groups, tags, isSearchActive }: Props) {
   const router = useRouter();
   const { toast } = useToast();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -210,6 +213,17 @@ export default function CompaniesTable({ companies, groups, isSearchActive }: Pr
     router.refresh();
   };
 
+  const handleBulkTag = async (tagId: string, action: "connect" | "disconnect") => {
+    const idsToUpdate = Array.from(selectedIds);
+    if (idsToUpdate.length === 0) return;
+
+    const payload = action === "connect" ? { connectTag: tagId } : { disconnectTag: tagId };
+    await Promise.all(idsToUpdate.map(id => updateCompanyAction(id, payload)));
+    toast({ type: "success", message: `Updated ${idsToUpdate.length} companies` });
+    setSelectedIds(new Set());
+    router.refresh();
+  };
+
   const openPreview = (id: string) => {
     const searchParams = new URLSearchParams(window.location.search);
     searchParams.set("preview", id);
@@ -274,6 +288,34 @@ export default function CompaniesTable({ companies, groups, isSearchActive }: Pr
                   <option value="" disabled className="text-gray-900">Select...</option>
                   {groups.map(g => (
                     <option key={g.id} value={g.id} className="text-gray-900">{g.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2 border-l border-gray-700 pl-4">
+                <span className="text-gray-400 text-xs uppercase tracking-wider font-semibold">Add Tag:</span>
+                <select 
+                  className="bg-transparent text-white text-sm outline-none cursor-pointer w-24 truncate"
+                  onChange={(e) => handleBulkTag(e.target.value, "connect")}
+                  value=""
+                >
+                  <option value="" disabled className="text-gray-900">Select...</option>
+                  {tags.map(t => (
+                    <option key={t.id} value={t.id} className="text-gray-900">{t.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2 border-l border-gray-700 pl-4">
+                <span className="text-gray-400 text-xs uppercase tracking-wider font-semibold">Remove Tag:</span>
+                <select 
+                  className="bg-transparent text-white text-sm outline-none cursor-pointer w-24 truncate"
+                  onChange={(e) => handleBulkTag(e.target.value, "disconnect")}
+                  value=""
+                >
+                  <option value="" disabled className="text-gray-900">Select...</option>
+                  {tags.map(t => (
+                    <option key={t.id} value={t.id} className="text-gray-900">{t.name}</option>
                   ))}
                 </select>
               </div>
@@ -360,11 +402,22 @@ export default function CompaniesTable({ companies, groups, isSearchActive }: Pr
                       />
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-3.5 w-3.5 shrink-0 text-gray-400 group-hover:text-gray-500 transition-colors" strokeWidth={1.5} />
-                        <span className="font-medium text-gray-900 leading-tight cursor-pointer hover:underline" onClick={() => openPreview(company.id)}>
-                          {company.businessName}
-                        </span>
+                      <div className="flex flex-col gap-1.5 items-start">
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-3.5 w-3.5 shrink-0 text-gray-400 group-hover:text-gray-500 transition-colors" strokeWidth={1.5} />
+                          <span className="font-medium text-gray-900 leading-tight cursor-pointer hover:underline" onClick={() => openPreview(company.id)}>
+                            {company.businessName}
+                          </span>
+                        </div>
+                        {company.tags && company.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 ml-5">
+                            {company.tags.map(t => (
+                              <span key={t.id} className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium border ${getTagColorClasses(t.color)}`}>
+                                {t.name}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-2">

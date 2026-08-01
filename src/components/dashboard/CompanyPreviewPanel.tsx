@@ -13,14 +13,16 @@ import { updateCompanyAction } from "@/app/actions/updateCompany";
 import { createNoteAction, deleteNoteAction } from "@/app/actions/notes";
 import { useToast } from "@/components/ui/toast";
 import { addRecentlyViewed } from "./SidebarClient";
-import { Status } from "@prisma/client";
+import { Status, Tag } from "@prisma/client";
+import { getTagColorClasses } from "@/lib/tagColors";
 
 interface Props {
   previewId: string;
   companyIds: string[];
+  tags: Tag[];
 }
 
-export default function CompanyPreviewPanel({ previewId, companyIds }: Props) {
+export default function CompanyPreviewPanel({ previewId, companyIds, tags }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -162,7 +164,7 @@ export default function CompanyPreviewPanel({ previewId, companyIds }: Props) {
         <div className="px-6 py-6 border-b border-gray-100 space-y-4">
           <div>
             <h2 className="text-xl font-bold text-gray-900 mb-2">{company.businessName}</h2>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 mt-3">
               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
                 {company.status}
               </span>
@@ -171,6 +173,42 @@ export default function CompanyPreviewPanel({ previewId, companyIds }: Props) {
                   {g.name}
                 </span>
               ))}
+              {company.tags?.map((t: any) => (
+                <span key={t.id} className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${getTagColorClasses(t.color)}`}>
+                  {t.name}
+                  <button onClick={async () => {
+                    await updateCompanyAction(company.id, { disconnectTag: t.id });
+                    setCompany({ ...company, tags: company.tags.filter((tag: any) => tag.id !== t.id) });
+                  }} className="ml-1 text-gray-400 hover:text-gray-900 focus:outline-none">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+              
+              <div className="relative group/add">
+                <button className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-dashed border-gray-300 text-gray-400 hover:text-gray-600 hover:border-gray-400 transition-colors focus:outline-none">
+                  <span className="text-sm leading-none mb-0.5">+</span>
+                </button>
+                <div className="absolute left-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl opacity-0 invisible group-hover/add:opacity-100 group-hover/add:visible transition-all z-20">
+                  <div className="max-h-48 overflow-y-auto p-1">
+                    {tags.filter(t => !company.tags?.some((ct: any) => ct.id === t.id)).map(t => (
+                      <button
+                        key={t.id}
+                        onClick={async () => {
+                          await updateCompanyAction(company.id, { connectTag: t.id });
+                          setCompany({ ...company, tags: [...(company.tags || []), t] });
+                        }}
+                        className="w-full text-left px-2 py-1.5 text-xs text-gray-700 hover:bg-gray-50 rounded"
+                      >
+                        {t.name}
+                      </button>
+                    ))}
+                    {tags.filter(t => !company.tags?.some((ct: any) => ct.id === t.id)).length === 0 && (
+                      <div className="px-2 py-2 text-xs text-gray-400 text-center">No tags available</div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 

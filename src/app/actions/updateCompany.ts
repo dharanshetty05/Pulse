@@ -18,6 +18,8 @@ export async function updateCompanyAction(
     followUpDate?: Date | null;
     connectGroup?: string;
     disconnectGroup?: string;
+    connectTag?: string;
+    disconnectTag?: string;
   }
 ) {
   const data: any = {};
@@ -36,6 +38,13 @@ export async function updateCompanyAction(
   }
   if (updates.disconnectGroup) {
     data.groups = { disconnect: { id: updates.disconnectGroup } };
+  }
+  
+  if (updates.connectTag) {
+    data.tags = { connect: { id: updates.connectTag } };
+  }
+  if (updates.disconnectTag) {
+    data.tags = { disconnect: { id: updates.disconnectTag } };
   }
 
   await updateCompany(id, data);

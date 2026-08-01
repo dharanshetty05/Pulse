@@ -1,22 +1,27 @@
 "use client";
 
 import { useMemo, useState, useEffect, useCallback, useTransition } from "react";
-import { Company, Group } from "@prisma/client";
+import { Company, Group, Tag, SavedView } from "@prisma/client";
 import CompaniesTable from "./CompaniesTable";
 import { isToday, isThisWeek, isThisMonth } from "@/lib/date";
-import { Search, MapPin, X, Filter, ArrowUpDown, Play } from "lucide-react";
+import { Search, MapPin, X, Filter, ArrowUpDown, Play, Tags, Bookmark, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { startSessionAction } from "@/app/actions/sessions";
 import CompanyPreviewPanel from "./CompanyPreviewPanel";
+import TagManagementModal from "./TagManagementModal";
+import SaveViewModal from "./SaveViewModal";
 
-interface CompanyWithGroups extends Company {
+interface CompanyWithGroupsAndTags extends Company {
   groups: Group[];
+  tags: Tag[];
 }
 
 interface Props {
-  companies: CompanyWithGroups[];
+  companies: CompanyWithGroupsAndTags[];
   groups: (Group & { _count: { companies: number } })[];
+  tags: (Tag & { _count?: { companies: number } })[];
+  savedViews: SavedView[];
 }
 
 const DATE_FILTERS = [
@@ -45,7 +50,7 @@ const SORT_OPTIONS = [
   { label: "Recently Updated", value: "updated" },
 ];
 
-export default function CompaniesSearch({ companies, groups }: Props) {
+export default function CompaniesSearch({ companies, groups, tags, savedViews }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -59,11 +64,15 @@ export default function CompaniesSearch({ companies, groups }: Props) {
   const urlGroup = searchParams.get("group") || "All";
   const urlPreview = searchParams.get("preview");
   const urlFollowup = searchParams.get("followup");
+  const urlTags = searchParams.get("tags") ? searchParams.get("tags")!.split(",") : [];
 
-  // Local state for immediate typing feedback on search
   const [localQuery, setLocalQuery] = useState(urlQuery);
   const [isPending, startTransition] = useTransition();
-  const [isStartingFocusMode, setIsStartingFocusMode] = useState(false);
+  const [isStartingWorkQueue, setIsStartingWorkQueue] = useState(false);
+  
+  const [showTagManagement, setShowTagManagement] = useState(false);
+  const [showSaveView, setShowSaveView] = useState(false);
+  const [showTagSelect, setShowTagSelect] = useState(false);
 
   // Sync local query when URL changes (e.g. back button)
   useEffect(() => {
@@ -85,18 +94,29 @@ export default function CompaniesSearch({ companies, groups }: Props) {
     return () => clearTimeout(timer);
   }, [localQuery, urlQuery, pathname, router, searchParams]);
 
-  const updateUrl = useCallback((key: string, value: string) => {
+  const updateUrl = useCallback((key: string, value: string | null) => {
     const params = new URLSearchParams(searchParams.toString());
     if (value && value !== "All" && value !== "all") {
       params.set(key, value);
     } else {
       params.delete(key);
     }
-    // Only push if changed
     if (params.toString() !== searchParams.toString()) {
       router.push(`${pathname}?${params.toString()}`, { scroll: false });
     }
   }, [searchParams, pathname, router]);
+
+  const toggleTagFilter = (tagName: string) => {
+    const nextTags = new Set(urlTags);
+    if (nextTags.has(tagName)) nextTags.delete(tagName);
+    else nextTags.add(tagName);
+    
+    if (nextTags.size > 0) {
+      updateUrl("tags", Array.from(nextTags).join(","));
+    } else {
+      updateUrl("tags", null);
+    }
+  };
 
   const filteredAndSortedCompanies = useMemo(() => {
     let result = companies.filter((company) => {
@@ -112,6 +132,7 @@ export default function CompaniesSearch({ companies, groups }: Props) {
       const matchesCity = urlCity === "All" || company.city === urlCity;
       const matchesStatus = urlStatus === "All" || company.status === urlStatus;
       const matchesGroup = urlGroup === "All" || company.groups.some(g => g.name === urlGroup);
+      const matchesTags = urlTags.length === 0 || urlTags.some(t => company.tags.some(ct => ct.name === t));
       
       const compDate = company.createdAt;
       let matchesDate = true;
@@ -138,7 +159,7 @@ export default function CompaniesSearch({ companies, groups }: Props) {
         }
       }
       
-      return matchesSearch && matchesCity && matchesStatus && matchesDate && matchesGroup && matchesFollowup;
+      return matchesSearch && matchesCity && matchesStatus && matchesDate && matchesGroup && matchesFollowup && matchesTags;
     });
 
     result.sort((a, b) => {
@@ -162,16 +183,16 @@ export default function CompaniesSearch({ companies, groups }: Props) {
   }, [companies, urlQuery, urlCity, urlStatus, urlDate, urlSort, urlGroup, urlFollowup]);
 
   const cities = ["All", ...new Set(companies.map((c) => c.city).filter(Boolean) as string[])];
-  const hasActiveFilters = urlQuery !== "" || urlCity !== "All" || urlStatus !== "All" || urlGroup !== "All" || urlDate !== "all" || !!urlFollowup;
+  const hasActiveFilters = urlQuery !== "" || urlCity !== "All" || urlStatus !== "All" || urlGroup !== "All" || urlDate !== "all" || !!urlFollowup || urlTags.length > 0;
 
   const clearFilters = () => {
     setLocalQuery("");
     router.push(pathname, { scroll: false });
   };
 
-  const handleEnterFocusMode = async () => {
+  const handleEnterWorkQueue = async () => {
     if (filteredAndSortedCompanies.length === 0) return;
-    setIsStartingFocusMode(true);
+    setIsStartingWorkQueue(true);
     const session = await startSessionAction(
       filteredAndSortedCompanies.map(c => c.id),
       window.location.search
@@ -179,7 +200,7 @@ export default function CompaniesSearch({ companies, groups }: Props) {
     if (session) {
       router.push(`/session/${session.id}`);
     } else {
-      setIsStartingFocusMode(false);
+      setIsStartingWorkQueue(false);
     }
   };
 
@@ -235,20 +256,30 @@ export default function CompaniesSearch({ companies, groups }: Props) {
           ))}
         </div>
         
-        <button
-          onClick={handleEnterFocusMode}
-          disabled={isStartingFocusMode || filteredAndSortedCompanies.length === 0}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
-        >
-          {isStartingFocusMode ? (
-            <span className="animate-pulse">Loading...</span>
-          ) : (
-            <>
-              <Play className="w-4 h-4" fill="currentColor" />
-              Focus Mode
-            </>
-          )}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowSaveView(true)}
+            className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            <Bookmark className="w-4 h-4" />
+            Save View
+          </button>
+
+          <button
+            onClick={handleEnterWorkQueue}
+            disabled={isStartingWorkQueue || filteredAndSortedCompanies.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
+          >
+            {isStartingWorkQueue ? (
+              <span className="animate-pulse">Loading...</span>
+            ) : (
+              <>
+                <Play className="w-4 h-4" fill="currentColor" />
+                Work Queue
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Search + Filters row */}
@@ -359,6 +390,65 @@ export default function CompaniesSearch({ companies, groups }: Props) {
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
         </div>
+
+        {/* Tags filter */}
+        <div className="relative z-10">
+          <button
+            onClick={() => setShowTagSelect(!showTagSelect)}
+            className={`
+              flex items-center justify-between rounded-lg border py-2.5 pl-3 pr-2 text-sm
+              shadow-sm outline-none transition-colors duration-150 min-w-[140px]
+              ${urlTags.length > 0 ? "border-gray-400 bg-gray-50 text-gray-900" : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"}
+            `}
+          >
+            <div className="flex items-center gap-2">
+              <Tags className="h-4 w-4 text-gray-400" strokeWidth={1.5} />
+              <span>{urlTags.length > 0 ? `${urlTags.length} tags selected` : "Filter by Tags"}</span>
+            </div>
+            <svg className="h-3.5 w-3.5 text-gray-400 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          <AnimatePresence>
+            {showTagSelect && (
+              <>
+                <div className="fixed inset-0 z-[-1]" onClick={() => setShowTagSelect(false)} />
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  className="absolute left-0 top-full mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden py-1"
+                >
+                  <div className="max-h-60 overflow-y-auto px-1">
+                    {tags.length === 0 ? (
+                      <div className="px-3 py-3 text-sm text-gray-500 text-center">No tags exist.</div>
+                    ) : (
+                      tags.map(t => (
+                        <button
+                          key={t.id}
+                          onClick={() => toggleTagFilter(t.name)}
+                          className="w-full flex items-center justify-between px-2 py-1.5 hover:bg-gray-50 rounded-md transition-colors"
+                        >
+                          <span className="text-sm text-gray-700">{t.name}</span>
+                          {urlTags.includes(t.name) && <Check className="w-3.5 h-3.5 text-gray-900" />}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                  <div className="border-t border-gray-100 p-2 mt-1">
+                    <button
+                      onClick={() => { setShowTagSelect(false); setShowTagManagement(true); }}
+                      className="w-full text-center text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 py-1.5 rounded transition-colors"
+                    >
+                      Manage Tags
+                    </button>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       {/* Results meta row */}
@@ -388,6 +478,7 @@ export default function CompaniesSearch({ companies, groups }: Props) {
       <CompaniesTable 
         companies={filteredAndSortedCompanies} 
         groups={groups}
+        tags={tags}
         isSearchActive={hasActiveFilters}
       />
 
@@ -396,9 +487,18 @@ export default function CompaniesSearch({ companies, groups }: Props) {
           <CompanyPreviewPanel 
             previewId={urlPreview} 
             companyIds={filteredAndSortedCompanies.map(c => c.id)} 
+            tags={tags}
           />
         )}
       </AnimatePresence>
+      
+      {showTagManagement && (
+        <TagManagementModal tags={tags} onClose={() => setShowTagManagement(false)} />
+      )}
+      
+      {showSaveView && (
+        <SaveViewModal currentFilters={window.location.search} onClose={() => setShowSaveView(false)} />
+      )}
     </div>
   );
 }

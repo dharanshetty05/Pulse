@@ -14,11 +14,15 @@ import {
   History,
   Pin,
   Calendar,
-  ThumbsUp
+  ThumbsUp,
+  Bookmark,
+  Trash2,
+  Edit2
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createGroupAction } from "@/app/actions/groups";
-import { Group, Company } from "@prisma/client";
+import { deleteSavedViewAction, updateSavedViewAction } from "@/app/actions/savedViews";
+import { Group, Company, SavedView } from "@prisma/client";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -30,6 +34,7 @@ const navItems = [
 interface Props {
   groups: (Group & { _count: { companies: number } })[];
   pinnedCompanies: Company[];
+  savedViews: SavedView[];
 }
 
 export function addRecentlyViewed(company: { id: string, name: string }) {
@@ -44,7 +49,7 @@ export function addRecentlyViewed(company: { id: string, name: string }) {
   } catch (e) {}
 }
 
-export default function SidebarClient({ groups, pinnedCompanies }: Props) {
+export default function SidebarClient({ groups, pinnedCompanies, savedViews }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
@@ -150,11 +155,54 @@ export default function SidebarClient({ groups, pinnedCompanies }: Props) {
           </div>
         )}
 
-        {/* Follow-Up Workspace */}
+        {/* Saved Views */}
+        {savedViews.length > 0 && (
+          <div className="px-3 py-2 border-b border-gray-100">
+            <div className="flex items-center px-3 py-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                Saved Views
+              </span>
+            </div>
+            <div className="space-y-0.5">
+              {savedViews.map(view => (
+                <div key={view.id} className="group flex items-center justify-between px-3 py-1.5 rounded-md text-sm hover:bg-gray-50 transition-colors">
+                  <Link
+                    href={`/companies?${view.filters}`}
+                    className="flex items-center gap-2.5 truncate flex-1"
+                  >
+                    <Bookmark className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                    <span className="text-gray-500 group-hover:text-gray-900 truncate font-medium">
+                      {view.name}
+                    </span>
+                  </Link>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={async () => {
+                      const newName = prompt("Rename view:", view.name);
+                      if (newName && newName.trim()) {
+                        await updateSavedViewAction(view.id, { name: newName.trim() });
+                      }
+                    }} className="p-1 hover:text-gray-900 text-gray-400 rounded">
+                      <Edit2 className="w-3 h-3" />
+                    </button>
+                    <button onClick={async () => {
+                      if (confirm("Delete this saved view?")) {
+                        await deleteSavedViewAction(view.id);
+                      }
+                    }} className="p-1 hover:text-red-600 text-gray-400 rounded">
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Smart Views (formerly Follow-Up Workspace) */}
         <div className="px-3 py-2 border-b border-gray-100">
           <div className="flex items-center px-3 py-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-              Follow-Up Workspace
+              Smart Views
             </span>
           </div>
           <div className="space-y-0.5">

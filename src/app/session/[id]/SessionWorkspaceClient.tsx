@@ -61,9 +61,14 @@ export default function SessionWorkspaceClient({ initialSession }: Props) {
 
     const newState = actionType === "SKIP" ? "SKIPPED" : "COMPLETED";
     let statusUpdate = actionType === "SKIP" ? undefined : actionType;
-    let noteContent = `Skipped in Focus Mode`;
-    if (actionType !== "SKIP") {
-      noteContent = `Status changed to ${actionType} in Focus Mode`;
+    
+    let noteContent = "Company skipped";
+    if (actionType === "FOLLOW_UP" && followUpDate) {
+      noteContent = `Follow-up scheduled for ${followUpDate.toLocaleDateString()}`;
+    } else if (actionType === "CLIENT") {
+      noteContent = `Company marked as Client`;
+    } else if (actionType !== "SKIP") {
+      noteContent = `Status changed from ${company.status} to ${actionType}`;
     }
 
     // Update local session state

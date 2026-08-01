@@ -41,8 +41,28 @@ model Company {
   
   importedFrom ImportCompany[]
   groups       Group[]
+  tags         Tag[]
   timelineNotes Note[]
   outreachSessions OutreachSessionCompany[]
+}
+
+model Tag {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  color     String    @default("blue")
+  companies Company[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model SavedView {
+  id        String    @id @default(uuid())
+  name      String
+  icon      String?
+  filters   String    // JSON string containing search, tags, groups, status, etc.
+  position  Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
 enum SessionStatus {

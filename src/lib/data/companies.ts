@@ -4,7 +4,10 @@ import { Prisma, Status } from "@prisma/client";
 export async function getCompanies() {
   return db.company.findMany({
     orderBy: { createdAt: "desc" },
-    include: { groups: true }
+    include: {
+      groups: true,
+      tags: true
+    }
   });
 }
 
@@ -13,6 +16,7 @@ export async function getCompanyById(id: string) {
     where: { id },
     include: {
       groups: true,
+      tags: true,
       timelineNotes: {
         orderBy: { createdAt: "desc" }
       }
