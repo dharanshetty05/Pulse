@@ -2,9 +2,12 @@
 
 import { createCompany } from "@/lib/data/companies";
 import { createCompanySchema } from "@/lib/validations/company";
+import { requireWorkspace } from "@/lib/session";
 import { redirect } from "next/navigation";
 
 export async function createCompanyAction(prevState: any, formData: FormData) {
+  const workspaceId = await requireWorkspace();
+
   const result = createCompanySchema.safeParse({
     businessName: formData.get("businessName")?.toString() || "",
     city: formData.get("city")?.toString() || "",
@@ -16,7 +19,7 @@ export async function createCompanyAction(prevState: any, formData: FormData) {
     return { error: result.error.errors[0].message };
   }
 
-  await createCompany({
+  await createCompany(workspaceId, {
     businessName: result.data.businessName,
     city: result.data.city,
     instagram: result.data.instagram,

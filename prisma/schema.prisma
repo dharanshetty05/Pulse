@@ -7,6 +7,201 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id            String      @id
+  name          String
+  email         String
+  emailVerified Boolean
+  image         String?
+  createdAt     DateTime
+  updatedAt     DateTime
+  sessions      Session[]
+  accounts      Account[]
+  workspaces    Workspace[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime
+  updatedAt             DateTime
+
+  @@map("account")
+}
+
+model Verification {
+  id         String    @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime?
+  updatedAt  DateTime?
+
+  @@map("verification")
+}
+
+model Workspace {
+  id               String            @id @default(uuid())
+  name             String            @default("Personal Workspace")
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  companies        Company[]
+  tags             Tag[]
+  savedViews       SavedView[]
+  outreachSessions OutreachSession[]
+  notes            Note[]
+  groups           Group[]
+  importCompanies  ImportCompany[]
+
+  @@map("workspace")
+}
+
+model Company {
+  id               String                   @id @default(uuid())
+  workspaceId      String
+  workspace        Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  businessName     String
+  website          String?
+  instagram        String?
+  email            String?
+  phone            String?
+  city             String?
+  status           Status                   @default(NEW)
+  notes            String?
+  isPinned         Boolean                  @default(false)
+  followUpDate     DateTime?
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  importedFrom     ImportCompany[]
+  timelineNotes    Note[]
+  outreachSessions OutreachSessionCompany[]
+  groups           Group[]                  @relation("CompanyToGroup")
+  tags             Tag[]                    @relation("CompanyToTag")
+}
+
+model Tag {
+  id          String    @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  color       String    @default("blue")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  companies   Company[] @relation("CompanyToTag")
+
+  @@unique([workspaceId, name])
+}
+
+model SavedView {
+  id          String    @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  icon        String?
+  filters     String
+  position    Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model OutreachSession {
+  id               String                   @id @default(uuid())
+  workspaceId      String
+  workspace        Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  status           SessionStatus            @default(ACTIVE)
+  startedAt        DateTime                 @default(now())
+  completedAt      DateTime?
+  currentCompanyId String?
+  filtersSnapshot  String
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  companies        OutreachSessionCompany[]
+}
+
+model OutreachSessionCompany {
+  id            String              @id @default(uuid())
+  sessionId     String
+  companyId     String
+  queuePosition Int
+  state         SessionCompanyState @default(PENDING)
+  completedAt   DateTime?
+  company       Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  session       OutreachSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, companyId])
+}
+
+model Note {
+  id          String    @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  content     String
+  companyId   String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+model Group {
+  id          String    @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  companies   Company[] @relation("CompanyToGroup")
+}
+
+model ImportCompany {
+  id           String       @id @default(uuid())
+  workspaceId  String
+  workspace    Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  businessName String
+  website      String?
+  instagram    String?
+  email        String?
+  phone        String?
+  city         String?
+  status       Status       @default(NEW)
+  notes        String?
+  importStatus ImportStatus @default(PENDING)
+  companyId    String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  company      Company?     @relation(fields: [companyId], references: [id])
+}
+
 enum Status {
   NEW
   CONTACTED
@@ -24,47 +219,6 @@ enum ImportStatus {
   FAILED
 }
 
-model Company {
-  id           String   @id @default(uuid())
-  businessName String
-  website      String?
-  instagram    String?
-  email        String?
-  phone        String?
-  city         String?
-  status       Status   @default(NEW)
-  notes        String?
-  isPinned     Boolean  @default(false)
-  followUpDate DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  
-  importedFrom ImportCompany[]
-  groups       Group[]
-  tags         Tag[]
-  timelineNotes Note[]
-  outreachSessions OutreachSessionCompany[]
-}
-
-model Tag {
-  id        String    @id @default(uuid())
-  name      String    @unique
-  color     String    @default("blue")
-  companies Company[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-}
-
-model SavedView {
-  id        String    @id @default(uuid())
-  name      String
-  icon      String?
-  filters   String    // JSON string containing search, tags, groups, status, etc.
-  position  Int       @default(0)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-}
-
 enum SessionStatus {
   ACTIVE
   COMPLETED
@@ -76,64 +230,4 @@ enum SessionCompanyState {
   CURRENT
   COMPLETED
   SKIPPED
-}
-
-model OutreachSession {
-  id               String   @id @default(uuid())
-  status           SessionStatus @default(ACTIVE)
-  startedAt        DateTime @default(now())
-  completedAt      DateTime?
-  currentCompanyId String?
-  filtersSnapshot  String
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  companies        OutreachSessionCompany[]
-}
-
-model OutreachSessionCompany {
-  id           String   @id @default(uuid())
-  sessionId    String
-  companyId    String
-  session      OutreachSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  queuePosition Int
-  state        SessionCompanyState @default(PENDING)
-  completedAt  DateTime?
-
-  @@unique([sessionId, companyId])
-}
-
-model Note {
-  id        String   @id @default(uuid())
-  content   String
-  companyId String
-  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Group {
-  id        String    @id @default(uuid())
-  name      String
-  companies Company[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-}
-
-model ImportCompany {
-  id           String       @id @default(uuid())
-  businessName String
-  website      String?
-  instagram    String?
-  email        String?
-  phone        String?
-  city         String?
-  status       Status       @default(NEW)
-  notes        String?
-  importStatus ImportStatus @default(PENDING)
-  companyId    String?
-  company      Company?     @relation(fields: [companyId], references: [id])
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
 }

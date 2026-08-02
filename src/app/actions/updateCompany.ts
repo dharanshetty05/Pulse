@@ -1,6 +1,7 @@
 "use server";
 
 import { updateCompany } from "@/lib/data/companies";
+import { requireWorkspace } from "@/lib/session";
 import { Status } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
@@ -22,6 +23,7 @@ export async function updateCompanyAction(
     disconnectTag?: string;
   }
 ) {
+  const workspaceId = await requireWorkspace();
   const data: any = {};
   if (updates.status !== undefined) data.status = updates.status as Status;
   if (updates.notes !== undefined) data.notes = updates.notes;
@@ -47,7 +49,7 @@ export async function updateCompanyAction(
     data.tags = { disconnect: { id: updates.disconnectTag } };
   }
 
-  await updateCompany(id, data);
+  await updateCompany(workspaceId, id, data);
   revalidatePath("/companies");
   revalidatePath(`/companies/${id}`);
 }

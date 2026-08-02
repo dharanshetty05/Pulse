@@ -1,7 +1,9 @@
 "use server";
 
 import { getCompanyById } from "@/lib/data/companies";
+import { requireWorkspace } from "@/lib/session";
 
 export async function getCompanyDetailsAction(id: string) {
-  return await getCompanyById(id);
+  const workspaceId = await requireWorkspace();
+  return await getCompanyById(workspaceId, id);
 }

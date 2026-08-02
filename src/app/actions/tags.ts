@@ -2,10 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { createTag, updateTag, deleteTag } from "@/lib/data/tags";
+import { requireWorkspace } from "@/lib/session";
 
 export async function createTagAction(name: string, color: string) {
   try {
-    const tag = await createTag(name, color);
+    const workspaceId = await requireWorkspace();
+    const tag = await createTag(workspaceId, name, color);
     revalidatePath("/companies");
     return { success: true, tag };
   } catch (error: any) {
@@ -16,7 +18,8 @@ export async function createTagAction(name: string, color: string) {
 
 export async function updateTagAction(id: string, data: { name?: string, color?: string }) {
   try {
-    const tag = await updateTag(id, data);
+    const workspaceId = await requireWorkspace();
+    const tag = await updateTag(workspaceId, id, data);
     revalidatePath("/companies");
     return { success: true, tag };
   } catch (error: any) {
@@ -27,7 +30,8 @@ export async function updateTagAction(id: string, data: { name?: string, color?:
 
 export async function deleteTagAction(id: string) {
   try {
-    await deleteTag(id);
+    const workspaceId = await requireWorkspace();
+    await deleteTag(workspaceId, id);
     revalidatePath("/companies");
     return { success: true };
   } catch (error: any) {

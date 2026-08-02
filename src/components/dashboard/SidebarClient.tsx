@@ -17,12 +17,14 @@ import {
   ThumbsUp,
   Bookmark,
   Trash2,
-  Edit2
+  Edit2,
+  LogOut
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createGroupAction } from "@/app/actions/groups";
 import { deleteSavedViewAction, updateSavedViewAction } from "@/app/actions/savedViews";
 import { Group, Company, SavedView } from "@prisma/client";
+import { signOut } from "@/lib/auth-client";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -320,6 +322,21 @@ export default function SidebarClient({ groups, pinnedCompanies, savedViews }: P
             </div>
           </div>
         )}
+      </div>
+
+      {/* User / Logout */}
+      <div className="px-3 py-4 mt-auto border-t border-gray-100 shrink-0">
+        <button
+          onClick={async () => {
+            await signOut();
+            router.push("/login");
+            router.refresh();
+          }}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm hover:bg-gray-50 transition-colors text-gray-500 hover:text-gray-900 group"
+        >
+          <LogOut className="w-4 h-4 shrink-0" />
+          <span className="font-medium">Sign Out</span>
+        </button>
       </div>
     </aside>
   );

@@ -2,10 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { createSavedView, updateSavedView, deleteSavedView } from "@/lib/data/savedViews";
+import { requireWorkspace } from "@/lib/session";
 
 export async function createSavedViewAction(name: string, filters: string, icon?: string) {
   try {
-    const view = await createSavedView(name, filters, icon);
+    const workspaceId = await requireWorkspace();
+    const view = await createSavedView(workspaceId, name, filters, icon);
     revalidatePath("/companies");
     return { success: true, view };
   } catch (error: any) {
@@ -15,7 +17,8 @@ export async function createSavedViewAction(name: string, filters: string, icon?
 
 export async function updateSavedViewAction(id: string, data: { name?: string, filters?: string, icon?: string, position?: number }) {
   try {
-    const view = await updateSavedView(id, data);
+    const workspaceId = await requireWorkspace();
+    const view = await updateSavedView(workspaceId, id, data);
     revalidatePath("/companies");
     return { success: true, view };
   } catch (error: any) {
@@ -25,7 +28,8 @@ export async function updateSavedViewAction(id: string, data: { name?: string, f
 
 export async function deleteSavedViewAction(id: string) {
   try {
-    await deleteSavedView(id);
+    const workspaceId = await requireWorkspace();
+    await deleteSavedView(workspaceId, id);
     revalidatePath("/companies");
     return { success: true };
   } catch (error: any) {

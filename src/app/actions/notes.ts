@@ -1,10 +1,12 @@
 "use server";
 
 import { createNote, deleteNote, updateNote } from "@/lib/data/notes";
+import { requireWorkspace } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 
 export async function createNoteAction(companyId: string, content: string) {
-  const note = await createNote({
+  const workspaceId = await requireWorkspace();
+  const note = await createNote(workspaceId, {
     content,
     company: { connect: { id: companyId } },
   });
@@ -13,12 +15,14 @@ export async function createNoteAction(companyId: string, content: string) {
 }
 
 export async function updateNoteAction(id: string, content: string) {
-  const note = await updateNote(id, { content });
+  const workspaceId = await requireWorkspace();
+  const note = await updateNote(workspaceId, id, { content });
   revalidatePath("/companies");
   return note;
 }
 
 export async function deleteNoteAction(id: string) {
-  await deleteNote(id);
+  const workspaceId = await requireWorkspace();
+  await deleteNote(workspaceId, id);
   revalidatePath("/companies");
 }
