@@ -14,9 +14,7 @@ export async function middleware(request: NextRequest) {
 
   try {
     const response = await fetch(`${request.nextUrl.origin}/api/auth/get-session`, {
-      headers: {
-        cookie: request.headers.get("cookie") || "",
-      },
+      headers: request.headers,
     });
 
     if (!response.ok) {
