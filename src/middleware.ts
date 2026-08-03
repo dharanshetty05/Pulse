@@ -6,6 +6,7 @@ export async function middleware(request: NextRequest) {
   // Allow auth API routes, login, and register
   if (
     pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/debug-db") ||
     pathname === "/login" ||
     pathname === "/register"
   ) {
