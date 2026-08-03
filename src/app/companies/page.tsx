@@ -8,13 +8,16 @@ import { getSavedViews } from "@/lib/data/savedViews";
 import CompaniesSearch from "@/components/dashboard/CompaniesSearch";
 import NewCompanyButton from "@/components/dashboard/NewCompanyButton";
 import { isToday } from "@/lib/date";
+import { requireWorkspace } from "@/lib/session";
 
 export default async function CompaniesPage() {
+  const workspaceId = await requireWorkspace();
+
   const [companies, groups, tags, savedViews] = await Promise.all([
-    getCompanies(),
-    getGroups(),
-    getTags(),
-    getSavedViews()
+    getCompanies(workspaceId),
+    getGroups(workspaceId),
+    getTags(workspaceId),
+    getSavedViews(workspaceId)
   ]);
 
   const totalCompanies = companies.length;

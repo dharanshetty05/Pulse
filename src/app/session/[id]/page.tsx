@@ -1,6 +1,7 @@
 import { getSessionById } from "@/lib/data/sessions";
 import { notFound } from "next/navigation";
 import SessionWorkspaceClient from "./SessionWorkspaceClient";
+import { requireWorkspace } from "@/lib/session";
 
 export default async function SessionPage({
   params,
@@ -8,8 +9,9 @@ export default async function SessionPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const workspaceId = await requireWorkspace();
 
-  const session = await getSessionById(id);
+  const session = await getSessionById(workspaceId, id);
 
   if (!session) return notFound();
 

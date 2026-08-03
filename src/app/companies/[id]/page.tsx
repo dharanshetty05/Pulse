@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { getCompanyById } from "@/lib/data/companies";
+import { requireWorkspace } from "@/lib/session";
 import CompanyDetails from "@/components/dashboard/CompanyDetails";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -11,7 +12,10 @@ export default async function CompanyPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const company = await getCompanyById(id);
+
+  const workspaceId = await requireWorkspace();
+
+  const company = await getCompanyById(workspaceId, id);
 
   if (!company) {
     return (

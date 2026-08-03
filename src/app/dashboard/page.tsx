@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { getCompanies } from "@/lib/data/companies";
 import { getStats } from "@/lib/analytics";
 import StatsGrid from "@/components/dashboard/StatsGrid";
+import { requireWorkspace } from "@/lib/session";
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -20,7 +21,9 @@ function getFormattedDate() {
 }
 
 export default async function DashboardPage() {
-  const companies = await getCompanies();
+  const workspaceId = await requireWorkspace();
+
+  const companies = await getCompanies(workspaceId);
   const stats = getStats(companies);
 
   return (

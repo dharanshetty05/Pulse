@@ -2,9 +2,12 @@ export const dynamic = "force-dynamic";
 
 import { getImportQueue } from "@/lib/data/import";
 import ImportClient from "./ImportClient";
+import { requireWorkspace } from "@/lib/session";
 
 export default async function ImportQueuePage() {
-  const queue = await getImportQueue();
+  const workspaceId = await requireWorkspace();
+
+  const queue = await getImportQueue(workspaceId);
 
   return (
     <div className="space-y-6">
