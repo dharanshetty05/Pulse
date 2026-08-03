@@ -35,13 +35,13 @@ export async function processSessionCompanyAction(
   noteContent?: string
 ) {
   const workspaceId = await requireWorkspace();
-  
+
   // Use a transaction for atomic update
   await db.$transaction(async (tx) => {
     const session = await tx.outreachSession.findFirst({
       where: { id: sessionId, workspaceId }
     });
-    
+
     if (!session) throw new Error("Unauthorized or session not found");
 
     // 1. Update OutreachSessionCompany state
@@ -70,7 +70,9 @@ export async function processSessionCompanyAction(
         data: {
           workspace: { connect: { id: workspaceId } },
           content: noteContent,
-          companyId: companyId
+          company: {
+            connect: { id: companyId }
+          },
         }
       });
     }
