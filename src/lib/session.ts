@@ -4,9 +4,13 @@ import { redirect } from "next/navigation";
 import { db } from "./db";
 
 export async function getCurrentUser() {
+  console.time("getCurrentUser");
   const session = await auth.api.getSession({
     headers: await headers(),
   });
+
+  console.timeEnd("getCurrentUser");
+  
   return session?.user || null;
 }
 
@@ -19,6 +23,7 @@ export async function requireUser() {
 }
 
 export async function requireWorkspace() {
+  console.time("requireWorkspace");
   const user = await requireUser();
   
   // We expect each user to have exactly one workspace for now.
@@ -26,6 +31,8 @@ export async function requireWorkspace() {
     where: { userId: user.id },
     orderBy: { createdAt: "asc" },
   });
+
+   console.timeEnd("requireWorkspace");
 
   if (!workspace) {
     throw new Error("User has no workspace.");

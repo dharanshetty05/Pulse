@@ -1,11 +1,13 @@
 import Sidebar from "@/components/dashboard/Sidebar";
-import { ToastProvider } from "@/components/ui/toast";
+import { requireWorkspace } from "@/lib/session";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const workspaceId = await requireWorkspace();
+  
   return (
           <div className="flex min-h-screen">
             <Sidebar />

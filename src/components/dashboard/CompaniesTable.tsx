@@ -1,21 +1,13 @@
 "use client";
 
-import { Company, Status, Group, Tag } from "@prisma/client";
+import { Company, Status } from "@prisma/client";
 import { useRouter } from "next/navigation";
-// import { motion, AnimatePresence } from "framer-motion";
-import { Building2, MapPin, Inbox, Edit3, Trash2, Globe, Heart, Mail, Phone } from "lucide-react";
+import { Building2, MapPin, Inbox, Trash2, Globe, Heart, Mail, Phone } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/components/ui/toast";
 import { deleteCompanyAction } from "@/app/actions/deleteCompany";
 import { updateCompanyAction } from "@/app/actions/updateCompany";
-import { getTagColorClasses } from "@/lib/tagColors";
-
-import {
-  motion,
-  AnimatePresence,
-  easeOut,
-  type Variants,
-} from "framer-motion";
+import { motion, AnimatePresence, easeOut, type Variants } from "framer-motion";
 
 const rowVariants: Variants = {
   hidden: {
@@ -40,31 +32,10 @@ const rowVariants: Variants = {
   },
 };
 
-interface CompanyWithGroupsAndTags extends Company {
-  groups: Group[];
-  tags: Tag[];
-}
-
 interface Props {
-  companies: CompanyWithGroupsAndTags[];
-  groups: Group[];
-  tags: Tag[];
+  companies: Company[];
   isSearchActive?: boolean;
 }
-
-// const rowVariants = {
-//   hidden: { opacity: 0, y: 6 },
-//   visible: (i: number) => ({
-//     opacity: 1,
-//     y: 0,
-//     transition: {
-//       delay: i * 0.03,
-//       duration: 0.2,
-//       ease: "easeOut",
-//     },
-//   }),
-//   exit: { opacity: 0, x: -10, transition: { duration: 0.2 } },
-// };
 
 function EditableCell({ 
   value, 
@@ -125,33 +96,16 @@ function EditableCell({
       <span className={`text-xs truncate ${value ? 'text-gray-600' : 'text-gray-300'}`}>
         {value || placeholder}
       </span>
-      <Edit3 className="h-2.5 w-2.5 text-gray-400 opacity-0 group-hover/cell:opacity-100 ml-auto" />
     </div>
   );
 }
 
-export default function CompaniesTable({ companies, groups, tags, isSearchActive }: Props) {
+export default function CompaniesTable({ companies, isSearchActive }: Props) {
   const router = useRouter();
   const { toast } = useToast();
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [optimisticDeletes, setOptimisticDeletes] = useState<Set<string>>(new Set());
 
   const visibleCompanies = companies.filter((c) => !optimisticDeletes.has(c.id));
-
-  const toggleAll = () => {
-    if (selectedIds.size === visibleCompanies.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(visibleCompanies.map((c) => c.id)));
-    }
-  };
-
-  const toggleOne = (id: string) => {
-    const next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedIds(next);
-  };
 
   const handleUpdateField = async (id: string, field: string, value: string) => {
     await updateCompanyAction(id, { [field]: value });
@@ -160,7 +114,6 @@ export default function CompaniesTable({ companies, groups, tags, isSearchActive
 
   const handleDelete = (id: string, businessName: string) => {
     setOptimisticDeletes((prev) => new Set(prev).add(id));
-    if (selectedIds.has(id)) toggleOne(id);
     
     let isUndone = false;
     const timeoutId = setTimeout(() => {
@@ -186,194 +139,12 @@ export default function CompaniesTable({ companies, groups, tags, isSearchActive
     });
   };
 
-  const handleBulkDelete = () => {
-    const idsToDelete = Array.from(selectedIds);
-    if (idsToDelete.length === 0) return;
-
-    setOptimisticDeletes((prev) => {
-      const next = new Set(prev);
-      idsToDelete.forEach((id) => next.add(id));
-      return next;
-    });
-    setSelectedIds(new Set());
-    
-    let isUndone = false;
-    const timeoutId = setTimeout(() => {
-      if (!isUndone) {
-        Promise.all(idsToDelete.map(id => deleteCompanyAction(id))).then(() => router.refresh());
-      }
-    }, 5000);
-
-    toast({
-      type: "undo",
-      message: `${idsToDelete.length} companies deleted`,
-      duration: 5000,
-      onUndo: () => {
-        isUndone = true;
-        clearTimeout(timeoutId);
-        setOptimisticDeletes((prev) => {
-          const next = new Set(prev);
-          idsToDelete.forEach(id => next.delete(id));
-          return next;
-        });
-        setSelectedIds(new Set(idsToDelete));
-        toast({ type: "success", message: "Deletion undone", duration: 2000 });
-      },
-    });
-  };
-
-  const handleBulkStatus = async (status: Status) => {
-    const idsToUpdate = Array.from(selectedIds);
-    if (idsToUpdate.length === 0) return;
-    
-    await Promise.all(idsToUpdate.map(id => updateCompanyAction(id, { status }))); 
-    toast({ type: "success", message: `Updated ${idsToUpdate.length} companies` });
-    setSelectedIds(new Set());
-    router.refresh();
-  };
-
-  const handleBulkGroup = async (groupId: string, action: "connect" | "disconnect") => {
-    const idsToUpdate = Array.from(selectedIds);
-    if (idsToUpdate.length === 0) return;
-
-    const payload = action === "connect" ? { connectGroup: groupId } : { disconnectGroup: groupId };
-    await Promise.all(idsToUpdate.map(id => updateCompanyAction(id, payload)));
-    toast({ type: "success", message: `Updated ${idsToUpdate.length} companies` });
-    setSelectedIds(new Set());
-    router.refresh();
-  };
-
-  const handleBulkTag = async (tagId: string, action: "connect" | "disconnect") => {
-    const idsToUpdate = Array.from(selectedIds);
-    if (idsToUpdate.length === 0) return;
-
-    const payload = action === "connect" ? { connectTag: tagId } : { disconnectTag: tagId };
-    await Promise.all(idsToUpdate.map(id => updateCompanyAction(id, payload)));
-    toast({ type: "success", message: `Updated ${idsToUpdate.length} companies` });
-    setSelectedIds(new Set());
-    router.refresh();
-  };
-
-  const openPreview = (id: string) => {
-    const searchParams = new URLSearchParams(window.location.search);
-    searchParams.set("preview", id);
-    router.push(`/companies?${searchParams.toString()}`, { scroll: false });
-  };
-
   return (
     <div className="space-y-3">
-      {/* Bulk actions bar */}
-      <AnimatePresence>
-        {selectedIds.size > 0 && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="flex items-center justify-between rounded-lg bg-gray-900 px-4 py-3 text-sm text-white shadow-sm overflow-hidden"
-          >
-            <div className="flex items-center gap-4 flex-wrap">
-              <span className="font-medium bg-white/20 px-2 py-0.5 rounded-md">
-                {selectedIds.size} selected
-              </span>
-              
-              <div className="flex items-center gap-2 border-l border-gray-700 pl-4">
-                <span className="text-gray-400 text-xs uppercase tracking-wider font-semibold">Status:</span>
-                <select 
-                  className="bg-transparent text-white text-sm outline-none cursor-pointer"
-                  onChange={(e) => handleBulkStatus(e.target.value as Status)}
-                  value=""
-                >
-                  <option value="" disabled className="text-gray-900">Select...</option>
-                  <option value="NEW" className="text-gray-900">New</option>
-                  <option value="CONTACTED" className="text-gray-900">Contacted</option>
-                  <option value="FOLLOW_UP" className="text-gray-900">Follow Up</option>
-                  <option value="INTERESTED" className="text-gray-900">Interested</option>
-                  <option value="MEETING_BOOKED" className="text-gray-900">Meeting Booked</option>
-                  <option value="CLIENT" className="text-gray-900">Client</option>
-                  <option value="CLOSED" className="text-gray-900">Closed</option>
-                </select>
-              </div>
-
-              <div className="flex items-center gap-2 border-l border-gray-700 pl-4">
-                <span className="text-gray-400 text-xs uppercase tracking-wider font-semibold">Add to Group:</span>
-                <select 
-                  className="bg-transparent text-white text-sm outline-none cursor-pointer w-24 truncate"
-                  onChange={(e) => handleBulkGroup(e.target.value, "connect")}
-                  value=""
-                >
-                  <option value="" disabled className="text-gray-900">Select...</option>
-                  {groups.map(g => (
-                    <option key={g.id} value={g.id} className="text-gray-900">{g.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center gap-2 border-l border-gray-700 pl-4">
-                <span className="text-gray-400 text-xs uppercase tracking-wider font-semibold">Remove from Group:</span>
-                <select 
-                  className="bg-transparent text-white text-sm outline-none cursor-pointer w-24 truncate"
-                  onChange={(e) => handleBulkGroup(e.target.value, "disconnect")}
-                  value=""
-                >
-                  <option value="" disabled className="text-gray-900">Select...</option>
-                  {groups.map(g => (
-                    <option key={g.id} value={g.id} className="text-gray-900">{g.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center gap-2 border-l border-gray-700 pl-4">
-                <span className="text-gray-400 text-xs uppercase tracking-wider font-semibold">Add Tag:</span>
-                <select 
-                  className="bg-transparent text-white text-sm outline-none cursor-pointer w-24 truncate"
-                  onChange={(e) => handleBulkTag(e.target.value, "connect")}
-                  value=""
-                >
-                  <option value="" disabled className="text-gray-900">Select...</option>
-                  {tags.map(t => (
-                    <option key={t.id} value={t.id} className="text-gray-900">{t.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center gap-2 border-l border-gray-700 pl-4">
-                <span className="text-gray-400 text-xs uppercase tracking-wider font-semibold">Remove Tag:</span>
-                <select 
-                  className="bg-transparent text-white text-sm outline-none cursor-pointer w-24 truncate"
-                  onChange={(e) => handleBulkTag(e.target.value, "disconnect")}
-                  value=""
-                >
-                  <option value="" disabled className="text-gray-900">Select...</option>
-                  {tags.map(t => (
-                    <option key={t.id} value={t.id} className="text-gray-900">{t.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            
-            <button
-              onClick={handleBulkDelete}
-              className="flex items-center gap-1.5 text-red-400 hover:text-red-300 transition-colors shrink-0 ml-4"
-            >
-              <Trash2 className="h-4 w-4" />
-              Delete
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50/50">
-              <th className="px-4 py-3 text-left w-12">
-                <input
-                  type="checkbox"
-                  checked={visibleCompanies.length > 0 && selectedIds.size === visibleCompanies.length}
-                  onChange={toggleAll}
-                  className="rounded border-gray-300 text-gray-900 focus:ring-gray-900 cursor-pointer"
-                />
-              </th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                 Business
               </th>
@@ -398,7 +169,7 @@ export default function CompaniesTable({ companies, groups, tags, isSearchActive
             <AnimatePresence>
               {visibleCompanies.length === 0 ? (
                 <tr>
-                  <td colSpan={7}>
+                  <td colSpan={6}>
                     <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
                       <Inbox className="h-8 w-8 text-gray-300" strokeWidth={1.5} />
                       <p className="text-sm font-medium text-gray-500">
@@ -419,35 +190,17 @@ export default function CompaniesTable({ companies, groups, tags, isSearchActive
                     className={`
                       group relative border-b border-gray-100 transition-colors
                       hover:bg-gray-50/80
-                      ${selectedIds.has(company.id) ? "bg-gray-50/80" : ""}
                       ${i === visibleCompanies.length - 1 ? "border-b-0" : ""}
                     `}
                   >
                     <td className="px-4 py-3">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(company.id)}
-                        onChange={() => toggleOne(company.id)}
-                        className="rounded border-gray-300 text-gray-900 focus:ring-gray-900 cursor-pointer"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
                       <div className="flex flex-col gap-1.5 items-start">
                         <div className="flex items-center gap-2">
                           <Building2 className="h-3.5 w-3.5 shrink-0 text-gray-400 group-hover:text-gray-500 transition-colors" strokeWidth={1.5} />
-                          <span className="font-medium text-gray-900 leading-tight cursor-pointer hover:underline" onClick={() => openPreview(company.id)}>
+                          <span className="font-medium text-gray-900 leading-tight cursor-pointer hover:underline">
                             {company.businessName}
                           </span>
                         </div>
-                        {company.tags && company.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 ml-5">
-                            {company.tags.map(t => (
-                              <span key={t.id} className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium border ${getTagColorClasses(t.color)}`}>
-                                {t.name}
-                              </span>
-                            ))}
-                          </div>
-                        )}
                       </div>
                     </td>
                     <td className="px-4 py-2">
@@ -485,13 +238,6 @@ export default function CompaniesTable({ companies, groups, tags, isSearchActive
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => openPreview(company.id)}
-                          className="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
-                          title="Open preview"
-                        >
-                          <Edit3 className="h-3.5 w-3.5" />
-                        </button>
                         <button
                           onClick={() => handleDelete(company.id, company.businessName)}
                           className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"

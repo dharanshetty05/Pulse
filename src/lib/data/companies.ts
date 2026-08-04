@@ -2,14 +2,16 @@ import { db } from "@/lib/db";
 import { Prisma, Status } from "@prisma/client";
 
 export async function getCompanies(workspaceId: string) {
-  return db.company.findMany({
+  console.time("getCompanies");
+
+  const companies = await db.company.findMany({
     where: { workspaceId },
     orderBy: { createdAt: "desc" },
-    include: {
-      groups: true,
-      tags: true
-    }
   });
+
+  console.timeEnd("getCompanies");
+
+  return companies;
 }
 
 export async function getCompanyById(workspaceId: string, id: string) {
