@@ -3,14 +3,13 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { LayoutDashboard, Building2, Clock, Download, Zap, LogOut } from "lucide-react";
+import { LayoutDashboard, Building2, Clock, Zap, LogOut } from "lucide-react";
 import { signOut } from "@/lib/auth-client";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Companies", href: "/companies", icon: Building2 },
   { label: "Follow Ups", href: "/followups", icon: Clock },
-  { label: "Import Queue", href: "/dashboard/import-queue", icon: Download },
 ];
 
 export default function SidebarClient() {

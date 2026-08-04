@@ -1,37 +1,16 @@
 import { db } from "@/lib/db";
-import { Prisma, Status } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 export async function getCompanies(workspaceId: string) {
-  console.time("getCompanies");
-
-  const companies = await db.company.findMany({
+  return db.company.findMany({
     where: { workspaceId },
     orderBy: { createdAt: "desc" },
   });
-
-  console.timeEnd("getCompanies");
-
-  return companies;
 }
 
 export async function getCompanyById(workspaceId: string, id: string) {
   return db.company.findFirst({
     where: { id, workspaceId },
-    include: {
-      groups: true,
-      tags: true,
-      timelineNotes: {
-        orderBy: { createdAt: "desc" }
-      }
-    }
-  });
-}
-
-export async function getPinnedCompanies(workspaceId: string) {
-  return db.company.findMany({
-    where: { workspaceId, isPinned: true },
-    orderBy: { updatedAt: "desc" },
-    include: { groups: true }
   });
 }
 

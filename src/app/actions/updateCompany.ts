@@ -15,16 +15,11 @@ export async function updateCompanyAction(
     instagram?: string;
     email?: string;
     phone?: string;
-    isPinned?: boolean;
     followUpDate?: Date | null;
-    connectGroup?: string;
-    disconnectGroup?: string;
-    connectTag?: string;
-    disconnectTag?: string;
   }
 ) {
   const workspaceId = await requireWorkspace();
-  const data: any = {};
+  const data: Parameters<typeof updateCompany>[2] = {};
   if (updates.status !== undefined) data.status = updates.status as Status;
   if (updates.notes !== undefined) data.notes = updates.notes;
   if (updates.city !== undefined) data.city = updates.city;
@@ -32,22 +27,7 @@ export async function updateCompanyAction(
   if (updates.instagram !== undefined) data.instagram = updates.instagram;
   if (updates.email !== undefined) data.email = updates.email;
   if (updates.phone !== undefined) data.phone = updates.phone;
-  if (updates.isPinned !== undefined) data.isPinned = updates.isPinned;
   if (updates.followUpDate !== undefined) data.followUpDate = updates.followUpDate;
-
-  if (updates.connectGroup) {
-    data.groups = { connect: { id: updates.connectGroup } };
-  }
-  if (updates.disconnectGroup) {
-    data.groups = { disconnect: { id: updates.disconnectGroup } };
-  }
-  
-  if (updates.connectTag) {
-    data.tags = { connect: { id: updates.connectTag } };
-  }
-  if (updates.disconnectTag) {
-    data.tags = { disconnect: { id: updates.disconnectTag } };
-  }
 
   await updateCompany(workspaceId, id, data);
   revalidatePath("/companies");

@@ -154,13 +154,7 @@ export default function CompaniesSearch({ companies }: Props) {
           <select
             value={urlStatus}
             onChange={(e) => updateUrl("status", e.target.value)}
-            className="
-              appearance-none rounded-lg border border-gray-200 bg-white
-              py-2.5 pl-9 pr-8 text-sm text-gray-700
-              shadow-sm outline-none cursor-pointer
-              transition-colors duration-150
-              focus:border-gray-400 focus:ring-2 focus:ring-gray-100
-            "
+            className="appearance-none rounded-lg border border-gray-200 bg-white py-2.5 pl-9 pr-8 text-sm text-gray-700 shadow-sm outline-none cursor-pointer transition-colors duration-150 focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
           >
             {STATUS_FILTERS.map((s) => (
               <option key={s} value={s}>

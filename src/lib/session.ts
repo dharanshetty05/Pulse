@@ -1,16 +1,14 @@
+import { cache } from "react";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "./db";
 
 export async function getCurrentUser() {
-  console.time("getCurrentUser");
   const session = await auth.api.getSession({
     headers: await headers(),
   });
 
-  console.timeEnd("getCurrentUser");
-  
   return session?.user || null;
 }
 
@@ -22,21 +20,18 @@ export async function requireUser() {
   return user;
 }
 
-export async function requireWorkspace() {
-  console.time("requireWorkspace");
+export const requireWorkspace = cache(async () => {
   const user = await requireUser();
   
-  // We expect each user to have exactly one workspace for now.
-  const workspace = await db.workspace.findFirst({
-    where: { userId: user.id },
-    orderBy: { createdAt: "asc" },
+  const workspace = await db.workspace.findUnique({
+    where: {
+      userId: user.id,
+    },
   });
-
-   console.timeEnd("requireWorkspace");
 
   if (!workspace) {
     throw new Error("User has no workspace.");
   }
   
   return workspace.id;
-}
+});
