@@ -1,5 +1,3 @@
-export const dynamic = "force-dynamic";
-
 import { Suspense } from "react";
 import { getCompanies } from "@/lib/data/companies";
 import CompaniesSearch from "@/components/dashboard/CompaniesSearch";
