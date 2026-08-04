@@ -12,7 +12,6 @@ import { getCompanyDetailsAction } from "@/app/actions/getCompany";
 import { updateCompanyAction } from "@/app/actions/updateCompany";
 import { createNoteAction, deleteNoteAction } from "@/app/actions/notes";
 import { useToast } from "@/components/ui/toast";
-import { addRecentlyViewed } from "./SidebarClient";
 import { Status, Tag } from "@prisma/client";
 import { getTagColorClasses } from "@/lib/tagColors";
 
@@ -44,7 +43,6 @@ export default function CompanyPreviewPanel({ previewId, companyIds, tags }: Pro
       if (mounted && data) {
         setCompany(data);
         setLoading(false);
-        addRecentlyViewed({ id: data.id, name: data.businessName });
       }
     });
     
