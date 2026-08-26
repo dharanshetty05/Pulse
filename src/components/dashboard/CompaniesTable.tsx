@@ -3,7 +3,7 @@
 import { Company, Status } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { Building2, MapPin, Inbox, Trash2, Globe, Heart, Mail, Phone } from "lucide-react";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useToast } from "@/components/ui/toast";
 import { deleteCompanyAction } from "@/app/actions/deleteCompany";
 import { updateCompanyAction } from "@/app/actions/updateCompany";
@@ -36,6 +36,14 @@ interface Props {
   companies: Company[];
   isSearchActive?: boolean;
 }
+
+// Track optimistic updates for each company field
+type OptimisticUpdate = {
+  companyId: string;
+  field: string;
+  previousValue: string | null;
+  newValue: string;
+};
 
 function EditableCell({ 
   value, 
@@ -100,16 +108,69 @@ function EditableCell({
   );
 }
 
-export default function CompaniesTable({ companies, isSearchActive }: Props) {
+export default function CompaniesTable({ companies: initialCompanies, isSearchActive }: Props) {
   const router = useRouter();
   const { toast } = useToast();
   const [optimisticDeletes, setOptimisticDeletes] = useState<Set<string>>(new Set());
+  const [optimisticUpdates, setOptimisticUpdates] = useState<OptimisticUpdate[]>([]);
+
+  // Apply optimistic updates to companies
+  const companies = useCallback(() => {
+    return initialCompanies.map(company => {
+      const updates = optimisticUpdates.filter(u => u.companyId === company.id);
+      if (updates.length === 0) return company;
+      
+      const updatedCompany = { ...company };
+      updates.forEach(u => {
+        (updatedCompany as any)[u.field] = u.newValue;
+      });
+      return updatedCompany;
+    });
+  }, [initialCompanies, optimisticUpdates])();
 
   const visibleCompanies = companies.filter((c) => !optimisticDeletes.has(c.id));
 
   const handleUpdateField = async (id: string, field: string, value: string) => {
-    await updateCompanyAction(id, { [field]: value });
-    toast({ type: "success", message: "Updated" });
+    // Find the company to get the previous value
+    const company = initialCompanies.find(c => c.id === id);
+    const previousValue = company ? (company as any)[field] : null;
+    
+    // Apply optimistic update immediately
+    setOptimisticUpdates(prev => [
+      ...prev.filter(u => !(u.companyId === id && u.field === field)),
+      { companyId: id, field, previousValue, newValue: value }
+    ]);
+
+    try {
+      await updateCompanyAction(id, { [field]: value });
+      // On success, remove from optimistic updates (server data will match)
+      setOptimisticUpdates(prev => prev.filter(u => !(u.companyId === id && u.field === field)));
+      toast({ type: "success", message: "Updated" });
+    } catch (error) {
+      // On error, revert optimistic update
+      setOptimisticUpdates(prev => prev.filter(u => !(u.companyId === id && u.field === field)));
+      toast({ type: "error", message: "Failed to update. Please try again." });
+    }
+  };
+
+  const handleStatusChange = async (id: string, newStatus: Status) => {
+    const company = initialCompanies.find(c => c.id === id);
+    const previousValue = company?.status || null;
+    
+    // Apply optimistic update immediately
+    setOptimisticUpdates(prev => [
+      ...prev.filter(u => !(u.companyId === id && u.field === 'status')),
+      { companyId: id, field: 'status', previousValue, newValue: newStatus }
+    ]);
+
+    try {
+      await updateCompanyAction(id, { status: newStatus });
+      setOptimisticUpdates(prev => prev.filter(u => !(u.companyId === id && u.field === 'status')));
+      toast({ type: "success", message: "Status updated" });
+    } catch (error) {
+      setOptimisticUpdates(prev => prev.filter(u => !(u.companyId === id && u.field === 'status')));
+      toast({ type: "error", message: "Failed to update status. Please try again." });
+    }
   };
 
   const handleDelete = (id: string, businessName: string) => {
@@ -221,10 +282,7 @@ export default function CompaniesTable({ companies, isSearchActive }: Props) {
                     <td className="px-4 py-3">
                       <select
                         value={company.status}
-                        onChange={async (e) => {
-                          await updateCompanyAction(company.id, { status: e.target.value as Status });
-                          toast({ type: "success", message: "Status updated" });
-                        }}
+                        onChange={(e) => handleStatusChange(company.id, e.target.value as Status)}
                         className="text-xs font-medium appearance-none bg-transparent cursor-pointer outline-none hover:bg-gray-100 px-1.5 py-1 rounded transition-colors w-full"
                       >
                         <option value="NEW">New</option>

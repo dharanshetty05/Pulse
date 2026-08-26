@@ -30,6 +30,6 @@ export async function updateCompanyAction(
   if (updates.followUpDate !== undefined) data.followUpDate = updates.followUpDate;
 
   await updateCompany(workspaceId, id, data);
-  revalidatePath("/companies");
+  // Only revalidate the specific company detail page, not the entire list
   revalidatePath(`/companies/${id}`);
 }

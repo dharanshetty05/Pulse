@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { updateCompanyAction } from "@/app/actions/updateCompany";
-import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/toast";
 import { Check, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -49,7 +49,7 @@ export default function CompanyEditor({
   currentStatus,
   currentNotes,
 }: Props) {
-  const router = useRouter();
+  const { toast } = useToast();
   const [status, setStatus] = useState(currentStatus);
   const [notes, setNotes] = useState(currentNotes || "");
   const [saving, setSaving] = useState(false);
@@ -58,11 +58,16 @@ export default function CompanyEditor({
   async function handleSave() {
     setSaving(true);
     setSaved(false);
-    await updateCompanyAction(id,{ status: status, notes: notes });
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-    router.refresh();
+    try {
+      await updateCompanyAction(id, { status: status, notes: notes });
+      setSaving(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+      toast({ type: "success", message: "Saved" });
+    } catch (error) {
+      setSaving(false);
+      toast({ type: "error", message: "Failed to save. Please try again." });
+    }
   }
 
   const isDirty =
