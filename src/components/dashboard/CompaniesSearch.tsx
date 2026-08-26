@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo, useState, useEffect, useCallback, startTransition } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { Company } from "@prisma/client";
 import CompaniesTable from "./CompaniesTable";
 import { Search, X, Filter, ArrowUpDown, } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useSearchParams, usePathname } from "next/navigation";
 
 interface Props {
   companies: Company[];
@@ -31,52 +31,43 @@ const SORT_OPTIONS = [
 ];
 
 export default function CompaniesSearch({ companies }: Props) {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Read from URL
-  const urlQuery = searchParams.get("query") || "";
-  const urlStatus = searchParams.get("status") || "All";
-  const urlSort = searchParams.get("sort") || "newest";
+  // Initialize local state from URL (for shareable links / direct navigation)
+  const [query, setQuery] = useState(() => searchParams.get("query") || "");
+  const [status, setStatus] = useState(() => searchParams.get("status") || "All");
+  const [sort, setSort] = useState(() => searchParams.get("sort") || "newest");
 
-  const [localQuery, setLocalQuery] = useState(urlQuery);
-  
-  // Sync local query when URL changes (e.g. back button)
+  // Sync URL to local state on popstate (back/forward navigation)
   useEffect(() => {
-    setLocalQuery(urlQuery);
-  }, [urlQuery]);
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      setQuery(params.get("query") || "");
+      setStatus(params.get("status") || "All");
+      setSort(params.get("sort") || "newest");
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
-  // Sync query to URL with debounce
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (localQuery !== urlQuery) {
-        const params = new URLSearchParams(searchParams.toString());
-        if (localQuery) params.set("query", localQuery);
-        else params.delete("query");
-        startTransition(() => {
-          router.push(`${pathname}?${params.toString()}`, { scroll: false });
-        });
-      }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [localQuery, urlQuery, pathname, router, searchParams]);
-
+  // Update URL without navigation (no RSC refetch)
   const updateUrl = useCallback((key: string, value: string | null) => {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(window.location.search);
     if (value && value !== "All" && value !== "all") {
       params.set(key, value);
     } else {
       params.delete(key);
     }
-    if (params.toString() !== searchParams.toString()) {
-      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    const newUrl = `${pathname}?${params.toString()}`;
+    if (newUrl !== window.location.href) {
+      window.history.pushState(null, "", newUrl);
     }
-  }, [searchParams, pathname, router]);
+  }, [pathname]);
 
   const filteredAndSortedCompanies = useMemo(() => {
-    let result = companies.filter((company) => {
-      const lowerQuery = urlQuery.toLowerCase();
+    const result = companies.filter((company) => {
+      const lowerQuery = query.toLowerCase();
       const matchesSearch = 
         company.businessName.toLowerCase().includes(lowerQuery) ||
         (company.website && company.website.toLowerCase().includes(lowerQuery)) ||
@@ -85,13 +76,13 @@ export default function CompaniesSearch({ companies }: Props) {
         (company.phone && company.phone.toLowerCase().includes(lowerQuery)) ||
         (company.city && company.city.toLowerCase().includes(lowerQuery));
 
-      const matchesStatus = urlStatus === "All" || company.status === urlStatus;
+      const matchesStatus = status === "All" || company.status === status;
       
       return matchesSearch && matchesStatus;
     });
 
     result.sort((a, b) => {
-      switch (urlSort) {
+      switch (sort) {
         case "newest":
           return b.createdAt.getTime() - a.createdAt.getTime();
         case "oldest":
@@ -108,13 +99,15 @@ export default function CompaniesSearch({ companies }: Props) {
     });
 
     return result;
-  }, [companies, urlQuery, urlStatus, urlSort]);
+  }, [companies, query, status, sort]);
 
-  const hasActiveFilters = urlQuery !== "" || urlStatus !== "All";
+  const hasActiveFilters = query !== "" || status !== "All";
 
   const clearFilters = () => {
-    setLocalQuery("");
-    router.push(pathname, { scroll: false });
+    setQuery("");
+    setStatus("All");
+    setSort("newest");
+    window.history.pushState(null, "", pathname);
   };
 
   return (
@@ -128,18 +121,18 @@ export default function CompaniesSearch({ companies }: Props) {
           <input
             type="text"
             placeholder="Search name, website, email, phone, city..."
-            value={localQuery}
-            onChange={(e) => setLocalQuery(e.target.value)}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
             className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-9 pr-9 text-sm text-gray-900 placeholder-gray-400 shadow-sm outline-none transition-colors duration-150 focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
           />
           <AnimatePresence>
-            {localQuery && (
+            {query && (
               <motion.button
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
                 transition={{ duration: 0.12 }}
-                onClick={() => setLocalQuery("")}
+                onClick={() => setQuery("")}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
               >
                 <X className="h-3.5 w-3.5" />
@@ -152,8 +145,11 @@ export default function CompaniesSearch({ companies }: Props) {
         <div className="relative">
           <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" strokeWidth={1.5} />
           <select
-            value={urlStatus}
-            onChange={(e) => updateUrl("status", e.target.value)}
+            value={status}
+            onChange={(e) => {
+              setStatus(e.target.value);
+              updateUrl("status", e.target.value);
+            }}
             className="appearance-none rounded-lg border border-gray-200 bg-white py-2.5 pl-9 pr-8 text-sm text-gray-700 shadow-sm outline-none cursor-pointer transition-colors duration-150 focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
           >
             {STATUS_FILTERS.map((s) => (
@@ -171,8 +167,11 @@ export default function CompaniesSearch({ companies }: Props) {
         <div className="relative">
           <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" strokeWidth={1.5} />
           <select
-            value={urlSort}
-            onChange={(e) => updateUrl("sort", e.target.value)}
+            value={sort}
+            onChange={(e) => {
+              setSort(e.target.value);
+              updateUrl("sort", e.target.value);
+            }}
             className="
               appearance-none rounded-lg border border-gray-200 bg-white
               py-2.5 pl-9 pr-8 text-sm text-gray-700
