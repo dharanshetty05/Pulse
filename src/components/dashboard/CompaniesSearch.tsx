@@ -116,7 +116,7 @@ export default function CompaniesSearch({ companies }: Props) {
       {/* Search + Filters row */}
       <div className="flex gap-2 flex-wrap sm:flex-nowrap">
         {/* Search input */}
-        <div className="relative flex-1 min-w-[200px]">
+        <div className="relative flex-1 min-w-50">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" strokeWidth={1.5} />
           <input
             type="text"
@@ -172,13 +172,7 @@ export default function CompaniesSearch({ companies }: Props) {
               setSort(e.target.value);
               updateUrl("sort", e.target.value);
             }}
-            className="
-              appearance-none rounded-lg border border-gray-200 bg-white
-              py-2.5 pl-9 pr-8 text-sm text-gray-700
-              shadow-sm outline-none cursor-pointer
-              transition-colors duration-150
-              focus:border-gray-400 focus:ring-2 focus:ring-gray-100
-            "
+            className="appearance-none rounded-lg border border-gray-200 bg-white py-2.5 pl-9 pr-8 text-sm text-gray-700 shadow-sm outline-none cursor-pointer transition-colors duration-150 focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
           >
             {SORT_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
