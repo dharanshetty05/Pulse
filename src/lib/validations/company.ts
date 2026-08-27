@@ -7,8 +7,3 @@ export const createCompanySchema = z.object({
   instagram: z.string().optional(),
   website: z.string().optional(),
 });
-
-export const updateCompanySchema = z.object({
-  status: z.nativeEnum(Status).optional(),
-  notes: z.string().optional(),
-});
