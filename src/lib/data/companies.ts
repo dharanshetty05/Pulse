@@ -14,6 +14,59 @@ export async function getCompanyById(workspaceId: string, id: string) {
   });
 }
 
+export async function getStats(workspaceId: string) {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const endOfToday = new Date();
+  endOfToday.setHours(23, 59, 59, 999);
+
+  const [
+    totalCompanies,
+    dmsSent,
+    messagedToday,
+    replies,
+    interested,
+    meetings,
+  ] = await Promise.all([
+    db.company.count({ where: { workspaceId } }),
+    db.company.count({ where: { workspaceId, status: { not: "NEW" } } }),
+    db.company.count({
+      where: {
+        workspaceId,
+        createdAt: { gte: startOfToday, lte: endOfToday },
+      },
+    }),
+    db.company.count({
+      where: {
+        workspaceId,
+        status: {
+          in: [
+            "INTERESTED",
+            "MEETING_BOOKED",
+            "CLIENT",
+            "CONTACTED",
+            "FOLLOW_UP",
+          ],
+        },
+      },
+    }),
+    db.company.count({ where: { workspaceId, status: "INTERESTED" } }),
+    db.company.count({ where: { workspaceId, status: "MEETING_BOOKED" } }),
+  ]);
+
+  const replyRate = dmsSent > 0 ? Number(((replies / dmsSent) * 100).toFixed(1)) : 0;
+
+  return {
+    totalCompanies,
+    messagedToday,
+    replies,
+    interested,
+    meetings,
+    replyRate,
+  };
+}
+
 export async function createCompany(workspaceId: string, data: Omit<Prisma.CompanyCreateInput, 'workspace'>) {
   return db.company.create({
     data: {
