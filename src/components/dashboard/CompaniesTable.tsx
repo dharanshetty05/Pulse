@@ -14,15 +14,17 @@ const rowVariants: Variants = {
     opacity: 0,
     y: 6,
   },
-  visible: (i: number) => ({
+  // Entrance is immediate (no per-row delay): a staggered delay keyed to the
+  // row index made later rows appear long after the first, which hurt
+  // perceived performance for a data table where users want rows right away.
+  visible: {
     opacity: 1,
     y: 0,
     transition: {
-      delay: i * 0.03,
       duration: 0.2,
       ease: easeOut,
     },
-  }),
+  },
   exit: {
     opacity: 0,
     x: -10,
@@ -243,7 +245,6 @@ export default function CompaniesTable({ companies: initialCompanies, isSearchAc
                 visibleCompanies.map((company, i) => (
                   <motion.tr
                     key={company.id}
-                    custom={i}
                     initial="hidden"
                     animate="visible"
                     exit="exit"
